@@ -1,0 +1,21 @@
+# Programa de predicación — MVP local
+
+## Ejecutar
+
+Desde esta carpeta, ejecutar `npm start` y abrir `http://localhost:5173`.
+
+La aplicación funciona sin internet y guarda los datos en el almacenamiento local del navegador. `Respaldar` descarga un JSON restaurable. La exportación CSV puede abrirse en Excel y `Exportar PDF` abre una vista limpia lista para guardar con el diálogo de impresión de Windows.
+
+## Alcance implementado
+
+- Participantes con ficha editable de nombre, estado, tipo y disponibilidad.
+- Catálogo de tipos de participante completamente configurable.
+- Turnos y puntos configurables, editables y eliminables cuando no tienen historial asociado.
+- Disponibilidad por día y turno, editable desde la ficha o desde su pantalla.
+- Generación mensual automática como borrador, con mínimo de dos personas y distribución por carga.
+- Edición manual protegida y regeneración de espacios no protegidos.
+- Detección de incompletos, participantes inactivos y solapamientos.
+- Estados de borrador/publicado.
+- Historial, respaldo/restauración, CSV e impresión/PDF.
+
+La siguiente evolución recomendada es sustituir el adaptador de `localStorage` por repositorios SQLite y migrar la interfaz a React/Tauri sin mover las reglas de generación y validación.

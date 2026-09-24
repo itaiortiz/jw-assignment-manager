@@ -1,0 +1,25 @@
+# Dependencias instaladas localmente
+node_modules/
+
+# Salidas y archivos temporales generados durante desarrollo
+output/
+outputs/
+tmp/
+*.log
+
+# Configuración y secretos locales
+.env
+.env.*
+!.env.example
+
+# Archivos del sistema y editores
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+
+# Cobertura y artefactos de compilación
+coverage/
+dist/
+build/
+
