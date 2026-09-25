@@ -23,6 +23,14 @@ Incorporar un módulo independiente de **Salidas de predicación** que comparta 
 - Una colisión se puede guardar como excepción explícita.
 - La exportación del nuevo módulo será solo PDF; Excel y CSV quedan fuera del alcance.
 
+## Estado de implementación
+
+El prototipo actual ya incluye la navegación separada, catálogos de lugares y horarios, programas mensuales, generación de citas, edición de capitán/lugar/estado, conflictos con predicación pública y exportación PDF. También incorpora los estados `Sin actividad` y `Otros planes`, tarjetas con indicadores por estado y referencias persistentes de mes, semana y día durante el scroll.
+
+La tabla de participantes comparte los capitanes disponibles con el módulo de salidas y conserva sus encabezados y filtros durante el scroll. Su resumen muestra el total, los resultados visibles y los filtros activos.
+
+Quedan como evolución posterior la captura inicial de datos históricos de agosto de 2026 y las pruebas automatizadas de regresión.
+
 ## Principios de diseño
 
 1. `Programas` de predicación pública y de salidas son colecciones distintas.

@@ -28,6 +28,9 @@ npm start
 │  ├─ sidebar.css             # Navegación lateral
 │  ├─ program-table.css       # Calendario, agenda, tarjetas y estados de programa
 │  ├─ participant-table.css   # Tabla y ficha de participantes
+│  ├─ outreach.js             # Módulo de Salidas de predicación
+│  ├─ outreach.css            # Calendario y controles visuales de salidas
+│  ├─ outreach-pdf.js         # Exportación PDF de salidas
 │  ├─ frequency.css           # Controles de frecuencia/recurrencia
 │  ├─ overrides.css           # Ajustes visuales transversales
 │  ├─ tag-overrides.css       # Ajustes para etiquetas y colores
@@ -36,6 +39,7 @@ npm start
 ├─ construir_programa.mjs     # Utilidad auxiliar fuera del runtime de la app
 ├─ crear_informe_participantes.mjs
 ├─ plan_mvp_programa_predicacion.md
+├─ plan_salidas_predicacion.md
 └─ ARCHITECTURE_AI.md
 ```
 
@@ -68,6 +72,10 @@ Colecciones principales:
 - `availabilities`: relación participante-turno-día.
 - `participantResources`: puntos habilitados por participante.
 - `programs`: programas mensuales y sus asignaciones.
+- `outreach`: configuración y programas independientes de Salidas de predicación:
+  - `places`: lugares de encuentro.
+  - `rules`: horarios puntuales por día de la semana.
+  - `programs`: programas mensuales con bloques, semanas de visita y citas.
 - `logs`: historial de acciones.
 - `settings`: configuración general, incluido el nombre de congregación.
 
@@ -91,6 +99,14 @@ Una asignación contiene:
 - `unassignedAccepted`
 
 La identidad estructural de una asignación es `date + turnId + resourceId`, no su `id`. Esta regla es importante para comparar un programa existente con la configuración actual.
+
+### Salidas de predicación
+
+El módulo de salidas conserva sus programas separados de los programas de predicación pública, pero comparte participantes y reglas de conflicto. Una cita de salida contiene `date`, `time`, `placeId` y `captainId`, además de `origin`, `protected`, `exceptionNote` y `notes`.
+
+Los estados `Sin actividad` y `Otros planes` se almacenan como citas sin capitán ni lugar. Si no se captura una razón, se usa por defecto el nombre del estado. En la interfaz se muestran como tarjetas grises con el texto `Sin Actividad / Otros` en el resumen.
+
+`outreach.js` administra lugares, reglas de horario, programas mensuales, generación de citas, edición de asignaciones y conflictos en ambas direcciones. `outreach-pdf.js` genera la versión imprimible del programa de salidas.
 
 ## 7. Reglas de negocio importantes
 
@@ -124,7 +140,7 @@ En la lista de programas, el chip azul `Nuevas asignaciones disponibles` indica 
 
 ## 8. Renderizado y eventos
 
-Las vistas se generan con `shell(html)`, que reemplaza `#app`, conecta botones con `data-action` y ejecuta mejoras posteriores. Las vistas principales son `dashboard`, `participants`, `types`, `states`, `turns`, `resources`, `availability`, `programs` y `openProgram`.
+Las vistas se generan con `shell(html)`, que reemplaza `#app`, conecta botones con `data-action` y ejecuta mejoras posteriores. Las vistas principales son `dashboard`, `participants`, `types`, `states`, `turns`, `resources`, `availability`, `programs`, `openProgram` y las vistas de configuración/calendario de `outreach.js`.
 
 Las tarjetas de programa tienen dos presentaciones: `calendarProgramMarkup` y `agendaProgramMarkup`. Ambas deben mantener los mismos estados, textos accesibles y atributos `data-program-id`/`data-assignment-id`.
 
@@ -145,6 +161,8 @@ Para acciones nuevas:
 - Conservar `title`, `aria-label`, `aria-pressed` y estados de foco para controles interactivos.
 - En modo oscuro, validar contraste de texto, bordes y estados hover.
 - Las tarjetas de asignación deben conservar su affordance de edición y no mostrar botones contradictorios con el estado.
+- Los calendarios conservan visible el contexto de mes, semana y día durante el scroll mediante encabezados sticky.
+- La tabla de participantes mantiene sticky la fila de resultados, los nombres de columnas y los filtros. El resumen informa el total, los resultados mostrados y los filtros activos.
 - Las acciones destructivas o que cambian estructura requieren confirmación explícita.
 
 ## 10. Límites conocidos y próximos pasos
@@ -161,6 +179,5 @@ Para acciones nuevas:
 2. No regenerar ni reasignar participantes automáticamente cuando el usuario solo cambia la configuración.
 3. Mantener la identidad estructural `date|turnId|resourceId` al comparar programas.
 4. Registrar cambios persistentes mediante `save`.
-5. Ejecutar `node --check app/main.js` después de modificar el archivo principal.
-6. Probar ambas vistas (`Calendario` y `Agenda`) y ambos temas antes de entregar cambios.
-
+5. Ejecutar `node --check app/main.js`, `node --check app/outreach.js` y `node --check app/outreach-pdf.js` después de modificar esos archivos.
+6. Probar ambas vistas (`Calendario` y `Agenda`), el calendario de salidas, la tabla de participantes y ambos temas antes de entregar cambios.

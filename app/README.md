@@ -4,7 +4,7 @@
 
 Desde esta carpeta, ejecutar `npm start` y abrir `http://localhost:5173`.
 
-La aplicación funciona sin internet y guarda los datos en el almacenamiento local del navegador. `Respaldar` descarga un JSON restaurable. La exportación CSV puede abrirse en Excel y `Exportar PDF` abre una vista limpia lista para guardar con el diálogo de impresión de Windows.
+La aplicación funciona sin internet y guarda los datos en el almacenamiento local del navegador. `Respaldar` descarga un JSON restaurable. La exportación CSV puede abrirse en Excel y `Exportar PDF` abre una vista limpia lista para guardar con el diálogo de impresión de Windows. El módulo de Salidas de predicación exporta su programa únicamente a PDF.
 
 ## Alcance implementado
 
@@ -17,5 +17,10 @@ La aplicación funciona sin internet y guarda los datos en el almacenamiento loc
 - Detección de incompletos, participantes inactivos y solapamientos.
 - Estados de borrador/publicado.
 - Historial, respaldo/restauración, CSV e impresión/PDF.
+- Módulo independiente de Salidas de predicación con programas mensuales, lugares de encuentro, horarios puntuales, capitanes y detección de conflictos con predicación pública.
+- Estados `Sin actividad` y `Otros planes` para salidas, con razón predeterminada cuando no se captura texto adicional.
+- Calendarios con referencia persistente al mes, semana y día; encabezados sticky para conservar el contexto durante el scroll.
+- Tabla de participantes con encabezados y filtros sticky, además de un resumen dinámico del total, resultados mostrados y filtros activos.
+- Tarjetas de calendario con indicadores visuales por estado: completada, pendiente, requiere atención, no disponible o sin actividad.
 
 La siguiente evolución recomendada es sustituir el adaptador de `localStorage` por repositorios SQLite y migrar la interfaz a React/Tauri sin mover las reglas de generación y validación.
