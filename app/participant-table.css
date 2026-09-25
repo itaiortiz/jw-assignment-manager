@@ -1,4 +1,11 @@
 .sort-button{display:inline-flex;align-items:center;gap:6px;padding:0;border:0;background:transparent;color:inherit;font-weight:700}
 .sort-button span{color:#5f7889;font-size:.85rem}.sort-button:hover{color:#1769aa}
 .filter-row th{padding:7px;background:#f8fafb}.filter-row input,.filter-row select{min-width:90px;padding:7px;font-size:.82rem;background:#fff}
+
+/* Mantiene visibles los nombres de columnas y los filtros al recorrer la lista. */
+.tablewrap:has(.filter-row){overflow:visible}
+table:has(.filter-row){border-collapse:separate;border-spacing:0}
+table:has(.filter-row) thead{position:sticky;top:-26px;z-index:5;box-shadow:0 3px 8px #17344d20}
+table:has(.filter-row) thead th{background:#f8fafb}
+html[data-theme="dark"] table:has(.filter-row) thead th{background:#203541;color:#d7e6ef;border-color:#304354}
 .state-rule{display:flex!important;flex-direction:row;align-items:center;gap:8px;padding-top:25px}.state-rule input{width:auto;accent-color:#1769aa}
