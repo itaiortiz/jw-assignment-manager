@@ -529,13 +529,13 @@ const originalEditOutreachCalendarAppointmentV2=editOutreachCalendarAppointmentV
 editOutreachCalendarAppointmentV2=(program,appointment)=>{
   originalEditOutreachCalendarAppointmentV2(program,appointment);
   const eyebrow=document.querySelector('#modal .toolbar .eyebrow');
-  if(eyebrow)eyebrow.textContent=outreachEditLabel(appointment);
+  if(eyebrow){eyebrow.classList.remove('eyebrow');eyebrow.classList.add('outreach-edit-date');eyebrow.textContent=outreachEditLabel(appointment);}
 };
 const originalEditOutreachCalendarAppointment=editOutreachCalendarAppointment;
 editOutreachCalendarAppointment=(program,appointment)=>{
   originalEditOutreachCalendarAppointment(program,appointment);
   const eyebrow=document.querySelector('#modal .toolbar .eyebrow');
-  if(eyebrow)eyebrow.textContent=outreachEditLabel(appointment);
+  if(eyebrow){eyebrow.classList.remove('eyebrow');eyebrow.classList.add('outreach-edit-date');eyebrow.textContent=outreachEditLabel(appointment);}
 };
 
 document.addEventListener('click',event=>{

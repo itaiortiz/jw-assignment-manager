@@ -76,6 +76,8 @@ html[data-theme="dark"] .outreach-agenda-item small{color:#b7c8d3}
 @media(max-width:720px){.outreach-viewbar{align-items:flex-start;flex-direction:column}.outreach-calendar-actions{width:100%;justify-content:space-between}.outreach-agenda-item{grid-template-columns:1fr;gap:8px}.outreach-agenda-item .manage-assignment{justify-self:start}}
 
 /* Edición directa de salidas */
+.outreach-edit-date{display:block;margin:0 0 5px;color:#6d8290;font-size:.78rem;font-weight:700;letter-spacing:.02em}
+html[data-theme="dark"] .outreach-edit-date{color:#b7c8d3}
 .outreach-review-tag{display:inline-flex;align-items:center;gap:6px;margin-top:5px;padding:4px 9px;border-radius:999px;font-size:.8rem;font-weight:750}.outreach-review-tag::before{width:7px;height:7px;border-radius:50%;background:currentColor;content:""}.outreach-review-tag.editing{background:#edf2f5;color:#526674}.outreach-review-tag.reviewed{background:#e8f6ee;color:#176b3d}.outreach-regeneration-notice{margin:14px 0 0;padding:10px 12px;border-radius:8px;background:#fff3d7;color:#805b13;font-size:.9rem;font-weight:650}
 .program-summary-card.is-pending{border-color:#d89a28;background:#fff8e8;color:#795415}.program-summary-card.is-pending strong{color:#b77912}.outreach-pending-indicator{display:inline-flex;align-items:center;margin-left:8px;color:#a76b11;font-size:.78rem;font-weight:750}
 #modal [data-reason][hidden],#modal [data-place][hidden],#modal [data-captain][hidden],#modal [data-place-field][hidden],#modal [data-captain-field][hidden],#modal [data-reason-field][hidden]{display:none!important}
