@@ -162,6 +162,7 @@ Para acciones nuevas:
 - En modo oscuro, validar contraste de texto, bordes y estados hover.
 - Las tarjetas de asignación deben conservar su affordance de edición y no mostrar botones contradictorios con el estado.
 - Los calendarios conservan visible el contexto de mes, semana y día durante el scroll mediante encabezados sticky.
+- El modal de edición de salidas muestra la fecha completa y el horario asociado (`día, fecha - nombre del horario - hora`).
 - La tabla de participantes mantiene sticky la fila de resultados, los nombres de columnas y los filtros. El resumen informa el total, los resultados mostrados y los filtros activos.
 - Las acciones destructivas o que cambian estructura requieren confirmación explícita.
 

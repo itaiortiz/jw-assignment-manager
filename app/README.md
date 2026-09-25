@@ -20,6 +20,7 @@ La aplicación funciona sin internet y guarda los datos en el almacenamiento loc
 - Módulo independiente de Salidas de predicación con programas mensuales, lugares de encuentro, horarios puntuales, capitanes y detección de conflictos con predicación pública.
 - Estados `Sin actividad` y `Otros planes` para salidas, con razón predeterminada cuando no se captura texto adicional.
 - Calendarios con referencia persistente al mes, semana y día; encabezados sticky para conservar el contexto durante el scroll.
+- El modal `Editar salida` identifica cada cita con el día, fecha, horario y hora completos.
 - Tabla de participantes con encabezados y filtros sticky, además de un resumen dinámico del total, resultados mostrados y filtros activos.
 - Tarjetas de calendario con indicadores visuales por estado: completada, pendiente, requiere atención, no disponible o sin actividad.
 

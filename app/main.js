@@ -483,6 +483,10 @@ function outreachTimeLabel(assignment){
     : db.outreach.rules.find(item=>item.active&&item.weekday===date.getDay()&&item.time===assignment.time);
   return rule?.name?`${rule.name} - ${assignment.time}`:assignment.time;
 }
+function outreachEditLabel(assignment){
+  const date=new Date(`${assignment.date}T12:00:00`),raw=date.toLocaleDateString('es-MX',{weekday:'long',day:'numeric',month:'long',year:'numeric'}).replace(',', ''),dateLabel=`${raw.charAt(0).toUpperCase()}${raw.slice(1)}`;
+  return `${dateLabel} - ${outreachTimeLabel(assignment)}`;
+}
 function outreachProgramSummary(program){
   const items=(program.assignments||[]).map(assignment=>({assignment,status:outreachAssignmentStatus(program,assignment)}));
   return {
@@ -520,6 +524,19 @@ function decorateOutreachProgramList(){
   document.querySelectorAll('#app table th').forEach(cell=>{if(cell.textContent.trim()==='Citas')cell.textContent='Salidas';});
   document.querySelectorAll('#app [data-outreach-action="openProgram"]').forEach(button=>{const program=db.outreach.programs.find(item=>item.id===button.dataset.id);if(!program)return;const row=button.closest('tr'),status=row?.cells[1];if(status)status.textContent=outreachCalendarState(program)==='reviewed'?'Revisado':'En edición';if(button.closest('td')!==row?.cells[0])return;const summary=outreachProgramSummary(program);if(!summary.attention.length||button.parentElement.querySelector('.outreach-pending-indicator'))return;const missingCaptain=summary.attention.filter(item=>!item.assignment.captainId).length,missingPlace=summary.attention.filter(item=>!item.assignment.placeId).length,unavailable=summary.attention.filter(item=>item.status.kind==='unavailable').length,details=[];if(missingCaptain)details.push(`${missingCaptain} sin capitán`);if(missingPlace)details.push(`${missingPlace} sin lugar de encuentro`);if(unavailable)details.push(`${unavailable} no disponibles`);const badge=document.createElement('span');badge.className='outreach-pending-indicator';badge.textContent='⚠ Pendientes';badge.title=details.join(' · ');button.insertAdjacentElement('afterend',badge);});
 }
+
+const originalEditOutreachCalendarAppointmentV2=editOutreachCalendarAppointmentV2;
+editOutreachCalendarAppointmentV2=(program,appointment)=>{
+  originalEditOutreachCalendarAppointmentV2(program,appointment);
+  const eyebrow=document.querySelector('#modal .toolbar .eyebrow');
+  if(eyebrow)eyebrow.textContent=outreachEditLabel(appointment);
+};
+const originalEditOutreachCalendarAppointment=editOutreachCalendarAppointment;
+editOutreachCalendarAppointment=(program,appointment)=>{
+  originalEditOutreachCalendarAppointment(program,appointment);
+  const eyebrow=document.querySelector('#modal .toolbar .eyebrow');
+  if(eyebrow)eyebrow.textContent=outreachEditLabel(appointment);
+};
 
 document.addEventListener('click',event=>{
   const button=event.target.closest('[data-outreach-action]');
