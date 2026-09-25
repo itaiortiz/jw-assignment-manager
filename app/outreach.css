@@ -25,6 +25,13 @@ html[data-theme="dark"] .captain-no-results{color:#aebfcb}
 .outreach-calendar-card{margin-top:18px}
 .outreach-viewbar{display:flex;align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap}
 .outreach-calendar-actions{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.outreach-export-menu{position:relative;z-index:8}
+.outreach-export-menu>summary{display:inline-flex;align-items:center;min-height:36px;padding:8px 12px;border-radius:6px;background:#1769aa;color:#fff;font-size:.9rem;font-weight:750;cursor:pointer;list-style:none}
+.outreach-export-menu>summary::-webkit-details-marker{display:none}
+.outreach-export-menu[open]>summary{background:#125786}
+.outreach-export-options{position:absolute;top:calc(100% + 6px);right:0;display:grid;gap:4px;min-width:132px;padding:6px;border:1px solid #c7dce8;border-radius:7px;background:#fff;box-shadow:0 8px 20px #17344d24}
+.outreach-export-options button{width:100%;border:0;border-radius:5px;background:transparent;color:#234b64;padding:8px 10px;text-align:left;cursor:pointer;font:700 .86rem Arial,Helvetica,sans-serif}
+.outreach-export-options button:hover,.outreach-export-options button:focus-visible{background:#eef6fa;outline:0}
 .outreach-calendar-actions strong{color:#315f79;font-size:.94rem}
 .outreach-calendar{overflow:auto;border:1px solid #d5e2e9;border-radius:9px;background:#fff}
 .outreach-calendar-weekdays,.outreach-calendar-grid{display:grid;grid-template-columns:repeat(7,minmax(132px,1fr));min-width:924px}
@@ -110,6 +117,7 @@ html[data-theme="dark"] .outreach-calendar-event.is-complete{border-left-color:#
 html[data-theme="dark"] .outreach-calendar-event.is-attention{border-color:#b47b28;border-left-color:#d59a32;background:#4f3b1e;color:#ffe1a0}
 html[data-theme="dark"] .outreach-calendar-event.is-unavailable{border-color:#c87573;border-left-color:#d28683;background:#5a3032;color:#ffd9d7}
 html[data-theme="dark"] .outreach-calendar-event.is-inactive{border-left-color:#6e818f;background:#293640;color:#d0dde4}
+html[data-theme="dark"] .outreach-export-options{border-color:#38657c;background:#172630;box-shadow:0 8px 20px #0006}html[data-theme="dark"] .outreach-export-options button{color:#d7e8f2}html[data-theme="dark"] .outreach-export-options button:hover,html[data-theme="dark"] .outreach-export-options button:focus-visible{background:#203541}
 
 /* Las tarjetas de resumen usan la misma variante visual que Predicación pública. */
 .program-summary-card.summary-inactive{border-top:3px solid #8b98a3}.program-summary-card.summary-inactive strong{color:#596a76}

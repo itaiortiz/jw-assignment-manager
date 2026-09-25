@@ -21,11 +21,11 @@ Incorporar un módulo independiente de **Salidas de predicación** que comparta 
 - Solamente los participantes activos con el rol existente `Capitan` son candidatos iniciales.
 - Una semana de visita omite las citas normales y queda identificada en el programa.
 - Una colisión se puede guardar como excepción explícita.
-- La exportación del nuevo módulo será solo PDF; Excel y CSV quedan fuera del alcance.
+- La exportación del nuevo módulo ofrece PDF y PNG; Excel y CSV quedan fuera del alcance de este módulo.
 
 ## Estado de implementación
 
-El prototipo actual ya incluye la navegación separada, catálogos de lugares y horarios, programas mensuales, generación de citas, edición de capitán/lugar/estado, conflictos con predicación pública y exportación PDF. También incorpora los estados `Sin actividad` y `Otros planes`, tarjetas con indicadores por estado y referencias persistentes de mes, semana y día durante el scroll. Los datos faltantes se muestran como pendientes en naranja; los conflictos se agrupan en Advertencias rojas. Los capitanes sin disponibilidad pueden guardarse como excepciones conscientes: el tooltip explica el conflicto y el nombre del capitán se omite en el PDF.
+El prototipo actual ya incluye la navegación separada, catálogos de lugares y horarios, programas mensuales, generación de citas, edición de capitán/lugar/estado, conflictos con predicación pública y exportación PDF/PNG. El botón `Exportar` ofrece ambos formatos usando la misma vista mensual de una sola hoja; el PNG se descarga como imagen de alta resolución. También incorpora los estados `Sin actividad` y `Otros planes`, tarjetas con indicadores por estado y referencias persistentes de mes, semana y día durante el scroll. Los listados de programas muestran directamente sus tablas, con un encabezado contextual y fechas de creación y modificación en Salidas de predicación para distinguir programas del mismo mes. Los datos faltantes se muestran como pendientes en naranja; los conflictos se agrupan en Advertencias rojas. Los capitanes sin disponibilidad pueden guardarse como excepciones conscientes: el tooltip explica el conflicto y PDF/PNG omiten las salidas pendientes o con advertencias no confirmadas.
 
 La tabla de participantes comparte los capitanes disponibles con el módulo de salidas y conserva sus encabezados y filtros durante el scroll. Su resumen muestra el total, los resultados visibles y los filtros activos.
 
@@ -99,7 +99,7 @@ El sistema mostrará el origen del conflicto: módulo, programa, lugar o punto, 
 
 ### Fase C - Terra Medium: entrega
 
-- Exportación PDF para salidas.
+- Exportación PDF y PNG para salidas, con la misma hoja mensual y filtrado de citas publicables.
 - Revisión visual e impresión.
 - Captura inicial de agosto de 2026 con conciliación manual de nombres.
 - Pruebas de regresión de ambos módulos.
@@ -114,4 +114,4 @@ El sistema mostrará el origen del conflicto: módulo, programa, lugar o punto, 
 - Una asignación pública y una salida incompatible se señalan en ambas direcciones.
 - El usuario puede guardar una excepción de forma deliberada; la tarjeta queda roja como advertencia y el PDF deja vacío el capitán de esa cita.
 - Una semana de visita no genera citas normales.
-- El programa de salidas solo requiere PDF al finalizar la fase C.
+- El programa de salidas permite exportar PDF o PNG al finalizar la fase C, sin alterar la exportación de Predicación pública.

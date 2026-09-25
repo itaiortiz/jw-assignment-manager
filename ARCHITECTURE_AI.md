@@ -30,7 +30,7 @@ npm start
 │  ├─ participant-table.css   # Tabla y ficha de participantes
 │  ├─ outreach.js             # Módulo de Salidas de predicación
 │  ├─ outreach.css            # Calendario y controles visuales de salidas
-│  ├─ outreach-pdf.js         # Exportación PDF de salidas
+│  ├─ outreach-pdf.js         # Exportación PDF y PNG de salidas
 │  ├─ frequency.css           # Controles de frecuencia/recurrencia
 │  ├─ overrides.css           # Ajustes visuales transversales
 │  ├─ tag-overrides.css       # Ajustes para etiquetas y colores
@@ -108,7 +108,11 @@ Los estados `Sin actividad` y `Otros planes` se almacenan como citas sin capitá
 
 Un capitán con conflicto de disponibilidad puede asignarse únicamente mediante una confirmación explícita como excepción consciente. La cita conserva el capitán seleccionado y se identifica con una tarjeta roja; el tooltip nombra al capitán y la asignación que genera el conflicto. La exportación PDF deja vacío el nombre del capitán para que la excepción no se publique como disponibilidad confirmada.
 
-`outreach.js` administra lugares, reglas de horario, programas mensuales, generación de citas, edición de asignaciones y conflictos en ambas direcciones. `outreach-pdf.js` genera la versión imprimible del programa de salidas.
+`outreach.js` administra lugares, reglas de horario, programas mensuales, generación de citas, edición de asignaciones y conflictos en ambas direcciones. `outreach-pdf.js` genera la versión imprimible PDF y la imagen PNG del programa de salidas a partir de la misma hoja mensual.
+
+El botón `Exportar` del programa de salidas ofrece PDF y PNG. El PDF conserva la vista de impresión; el PNG captura únicamente la hoja mensual, con resolución ampliada para compartirla como imagen. Ambos formatos filtran las citas pendientes o con advertencias no confirmadas y muestran las marcadas explícitamente como excepción o sin actividad según las reglas del módulo. Este flujo no modifica `pdf-export.js`, que pertenece a Predicación pública.
+
+Las vistas de listado de ambos módulos presentan la tabla directamente bajo la cabecera contextual de la sección, sin un subtítulo redundante. La tabla de programas de salidas incluye `Creado`, `Modificado` y `Salidas` para distinguir rápidamente programas del mismo mes.
 
 ## 7. Reglas de negocio importantes
 

@@ -7,46 +7,68 @@ const capitalize = value => value ? `${value.charAt(0).toUpperCase()}${value.sli
 
 const monthLabel = month => {
   const [year, number] = String(month).split('-').map(Number);
-  return capitalize(new Date(year, number - 1, 1).toLocaleDateString('es-MX', {month:'long',year:'numeric'}));
-};
-const dayLabel = date => capitalize(localDate(date).toLocaleDateString('es-MX', {weekday:'long',day:'numeric',month:'long'}));
-const weekLabel = start => {
-  const first = localDate(start), last = addDays(first, 6);
-  return `Semana del ${first.toLocaleDateString('es-MX',{day:'numeric',month:'long'})} al ${last.toLocaleDateString('es-MX',{day:'numeric',month:'long'})}`;
+  return capitalize(new Date(year, number - 1, 1).toLocaleDateString('es-MX', {month: 'long', year: 'numeric'}));
 };
 
-export function buildOutreachPdfDocument({program, places, participants, settings}) {
+const updatedLabel = value => {
+  if (!value) return '';
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return '';
+  return `Actualizado: ${capitalize(date.toLocaleDateString('es-MX', {day: 'numeric', month: 'short', year: 'numeric'}))}`;
+};
+
+export function buildOutreachPdfDocument({program, places = [], participants = [], rules = [], settings}) {
   const placeById = new Map(places.map(place => [place.id, place]));
   const personById = new Map(participants.map(person => [person.id, person]));
+  const scheduleLabel = appointment => {
+    const weekday = localDate(appointment.date).getDay();
+    const rule = rules.find(item => Number(item.weekday) === weekday && item.time === appointment.time);
+    const period = appointment.time && appointment.time < '12:00' ? 'Mañana' : 'Tarde';
+    return [rule?.name || period, appointment.time].filter(Boolean).join(' ') || appointment.time;
+  };
+  const appointmentMarkup = appointment => {
+    const schedule = escapeHtml(scheduleLabel(appointment));
+    if (appointment.inactive) {
+      return `<article class="appointment-card inactive"><strong class="appointment-time">${schedule}</strong><span class="inactive-reason">${escapeHtml(appointment.inactiveReason || 'Sin actividad')}</span></article>`;
+    }
+    const captain = personById.get(appointment.captainId);
+    const place = placeById.get(appointment.placeId);
+    if (!captain || !place) return '';
+    return `<article class="appointment-card"><strong class="appointment-time">${schedule}</strong><span class="appointment-detail captain-detail"><span class="calendar-icon" aria-hidden="true">🧑‍💼</span>${escapeHtml(captain.name)}</span><span class="appointment-detail place-detail"><span class="calendar-icon" aria-hidden="true">🏠</span>${escapeHtml(place.name)}</span></article>`;
+  };
   const appointmentsByDate = new Map();
   (program.assignments || []).forEach(appointment => {
+    const markup = appointmentMarkup(appointment);
+    if (!markup) return;
     const day = appointmentsByDate.get(appointment.date) || [];
-    day.push(appointment);
+    day.push({appointment, markup});
     appointmentsByDate.set(appointment.date, day);
   });
+  appointmentsByDate.forEach(day => day.sort((left, right) => left.appointment.time.localeCompare(right.appointment.time)));
+
   const [year, month] = program.month.split('-').map(Number);
-  const first = new Date(year, month - 1, 1, 12), last = new Date(year, month, 0, 12);
-  const weeks = new Map();
-  for (let date = first; date <= last; date = addDays(date, 1)) {
-    const key = isoDate(mondayOf(date));
-    const week = weeks.get(key) || [];
-    week.push(isoDate(date));
-    weeks.set(key, week);
-  }
-  const weekMarkup = [...weeks.entries()].map(([weekStart, dates]) => `<section class="week"><h2>${escapeHtml(weekLabel(weekStart))}</h2>${dates.map(date => {
-    const appointments = (appointmentsByDate.get(date) || []).sort((left,right) => left.time.localeCompare(right.time));
-    if (!appointments.length) return '';
-    return `<article class="day"><h3>${escapeHtml(dayLabel(date))}</h3>${appointments.map(appointment => {
-      if (appointment.inactive) return `<div class="appointment inactive"><div><strong>${escapeHtml(appointment.time)}</strong><span>Sin actividad</span></div><div class="reason"><b>Motivo</b><span>${escapeHtml(appointment.inactiveReason || 'Sin especificar')}</span></div></div>`;
-      const place = placeById.get(appointment.placeId), captain = personById.get(appointment.captainId), captainName = appointment.exception ? '' : captain?.name || 'Sin asignar';
-      return `<div class="appointment"><div><strong>${escapeHtml(appointment.time)}</strong><span>${escapeHtml(place?.name || 'Sin lugar de encuentro')}</span>${place?.address ? `<small>${escapeHtml(place.address)}</small>` : ''}</div><div class="captain"><b>Capitán</b><span>${escapeHtml(captainName)}</span></div></div>`;
-    }).join('')}</article>`;
-  }).join('')}</section>`).join('');
+  const first = new Date(year, month - 1, 1, 12);
+  const last = new Date(year, month, 0, 12);
+  const firstCell = mondayOf(first);
+  const lastCell = addDays(last, 6 - ((last.getDay() + 6) % 7));
+  const cells = [];
+  for (let date = firstCell; date <= lastCell; date = addDays(date, 1)) cells.push(new Date(date));
+  const weekCount = Math.ceil(cells.length / 7);
+  const calendarMarkup = cells.map(date => {
+    const value = isoDate(date);
+    const appointments = appointmentsByDate.get(value) || [];
+    const outside = date < first || date > last;
+    const countClass = `count-${Math.min(appointments.length, 3)}`;
+    return `<section class="calendar-day ${outside ? 'outside-month' : ''} ${countClass}"><header>${date.getDate()}</header>${appointments.map(item => item.markup).join('')}</section>`;
+  }).join('');
   const congregation = settings?.congregationName || 'Congregación';
-  const title = `Programa de salidas de predicación - ${monthLabel(program.month)}`;
+  const title = `Programa de predicación - ${monthLabel(program.month)}`;
+  const updated = updatedLabel(program.updatedAt);
+
   return `<!doctype html><html lang="es"><head><meta charset="utf-8"><title>${escapeHtml(title)}</title><style>
-    @page{size:A4 portrait;margin:12mm 12mm 16mm}*{box-sizing:border-box}html{-webkit-print-color-adjust:exact;print-color-adjust:exact}body{margin:0;background:#edf3f5;color:#173f59;font-family:Arial,Helvetica,sans-serif}.controls{display:flex;justify-content:space-between;gap:12px;max-width:210mm;margin:12px auto;padding:10px 14px;background:#eef7fc;border:1px solid #b9dceb}.controls p{margin:0;font-size:13px}.controls button{border:0;border-radius:6px;background:#1769aa;color:#fff;font:700 14px Arial;padding:9px 13px;cursor:pointer}.document{max-width:210mm;margin:auto;padding:12mm;background:#fff}.header{padding:8mm 9mm;background:#173f59;color:white}.header h1{margin:0;font-size:18pt}.header p{margin:2mm 0 0;color:#dcebf3;font-weight:700;font-size:9pt}.header strong{display:block;margin-top:3mm;font-size:11pt}.week{margin-top:6mm;break-inside:avoid}.week h2{margin:0;padding:3mm 5mm;background:#e7f0f3;border-left:3px solid #0f766e;font-size:11pt}.day{margin-top:3mm;border:1px solid #d9e5eb;break-inside:avoid}.day h3{margin:0;padding:3mm 4mm;background:#f5f8f9;font-size:10pt}.appointment{display:grid;grid-template-columns:55% 45%;border-top:1px solid #d9e5eb;min-height:15mm}.appointment>div{padding:3mm 4mm}.appointment>div:first-child{border-right:1px solid #e8eff3}.appointment strong,.captain b,.reason b{display:block;color:#0f766e;font-size:9pt}.appointment span{display:block;margin-top:1mm;font-size:10pt;font-weight:700}.appointment small{display:block;margin-top:1mm;color:#637482;font-size:8.5pt}.captain,.reason{display:flex;flex-direction:column;justify-content:center}.appointment.inactive{border-color:#d7b75d;background:#fff8df}.appointment.inactive strong,.appointment.inactive .reason b{color:#785a12}@media screen{.document{box-shadow:0 4px 18px #17344d24}}@media print{body{background:#fff}.controls{display:none}.document{max-width:none;padding:0;box-shadow:none}}
-  </style></head><body><aside class="controls"><p>Para conservar el diseño, activa <b>Gráficos de fondo</b> y desactiva <b>Encabezados y pies de página</b>.</p><button onclick="window.print()">Imprimir / Guardar PDF</button></aside><main class="document"><header class="header"><h1>Programa de salidas de predicación</h1><p>${escapeHtml(congregation)}</p><strong>${escapeHtml(monthLabel(program.month))}</strong></header>${weekMarkup || '<p>No hay salidas para este programa.</p>'}</main></body></html>`;
+    .header-meta strong{font-size:13pt!important}.appointment-detail.captain-detail{font-size:7.8pt!important;font-weight:700!important;line-height:1.12!important}.appointment-detail.place-detail{font-size:6.8pt!important;font-weight:400!important;line-height:1.08!important}.calendar-day.count-2 .appointment-detail.captain-detail{font-size:7.1pt!important}.calendar-day.count-2 .appointment-detail.place-detail{font-size:6.35pt!important;font-weight:400!important}.calendar-day.count-3 .appointment-detail.captain-detail{font-size:6.3pt!important}.calendar-day.count-3 .appointment-detail.place-detail{font-size:5.7pt!important;font-weight:400!important}
+    @page{size:A4 landscape;margin:8mm 8mm 9mm}*{box-sizing:border-box}html{-webkit-print-color-adjust:exact;print-color-adjust:exact}body{margin:0;background:#edf3f5;color:#173f59;font-family:Arial,Helvetica,sans-serif}.controls{display:flex;justify-content:space-between;gap:12px;max-width:297mm;margin:12px auto 0;padding:10px 14px;background:#eef7fc;border:1px solid #b9dceb}.controls p{margin:0;font-size:13px}.controls button{border:0;border-radius:6px;background:#1769aa;color:#fff;font:700 14px Arial;padding:9px 13px;cursor:pointer}.document{display:flex;flex-direction:column;width:281mm;height:193mm;margin:12px auto;padding:0;background:#fff}.header{display:flex;align-items:center;justify-content:space-between;gap:12mm;min-height:23mm;padding:5mm 6mm;background:#173f59;color:#fff}.header>div{min-width:0}.header h1{margin:0;font-size:16pt;line-height:1.05}.header p{margin:1.2mm 0 0;color:#dcebf3;font-weight:700;font-size:8pt;letter-spacing:.03em}.header-meta{text-align:right}.header-meta strong{display:block;font-size:11pt;white-space:nowrap}.header-meta span{display:block;margin-top:1mm;color:#dcebf3;font-size:7.5pt;white-space:nowrap}.calendar{display:flex;flex:1;flex-direction:column;min-height:0;margin-top:3.5mm}.calendar-weekdays,.calendar-grid{display:grid;grid-template-columns:repeat(7,minmax(0,1fr))}.calendar-weekdays{flex:0 0 7mm;border:1px solid #d5e2e9;border-bottom:0;background:#e7f0f3;color:#173f59;font-size:7.2pt;font-weight:700}.calendar-weekdays span{display:grid;place-items:center;border-right:1px solid #d5e2e9}.calendar-weekdays span:last-child{border-right:0}.calendar-grid{flex:1;min-height:0;grid-template-rows:repeat(${weekCount},minmax(0,1fr));border-top:1px solid #d5e2e9;border-left:1px solid #d5e2e9}.calendar-day{position:relative;min-width:0;min-height:0;padding:6.5mm 1.2mm 1mm;border-right:1px solid #d5e2e9;border-bottom:1px solid #d5e2e9;background:#fff}.calendar-day.outside-month{background:#f7fafb;color:#8194a0}.calendar-day header{position:absolute;top:1.4mm;right:1.8mm;color:#173f59;font-size:7.3pt;font-weight:700}.outside-month header{color:#8194a0}.appointment-card{display:grid;gap:.55mm;margin-bottom:1mm;padding:1.15mm 1.35mm;border:1px solid #c7dce8;border-left:2px solid #4b9ac3;border-radius:2.2mm;background:#f3f9fc;overflow-wrap:anywhere;font-size:6.45pt;line-height:1.1}.appointment-time{color:#0f766e;font-size:7.05pt;line-height:1.05}.appointment-detail{display:flex;align-items:flex-start;gap:.65mm;color:#173f59;font-weight:700}.calendar-icon{display:inline-block;flex:0 0 3mm;width:3mm;font-size:7.2pt;line-height:1;text-align:center}.appointment-card.inactive{border-color:#d7b75d;border-left-color:#b18a22;background:#fff8df;color:#785a12}.appointment-card.inactive .appointment-time{color:#785a12}.inactive-reason{font-weight:700;overflow-wrap:anywhere}.calendar-day.count-2{padding-top:5.7mm}.calendar-day.count-2 .appointment-card{gap:.35mm;margin-bottom:.65mm;padding:.75mm 1mm;font-size:5.85pt;line-height:1.03}.calendar-day.count-2 .appointment-time{font-size:6.3pt}.calendar-day.count-2 .calendar-icon{flex-basis:2.7mm;width:2.7mm;font-size:6.4pt}.calendar-day.count-3 .appointment-card{gap:.2mm;margin-bottom:.35mm;padding:.45mm .75mm;font-size:5.2pt;line-height:1}.calendar-day.count-3 .appointment-time{font-size:5.8pt}.calendar-day.count-3 .calendar-icon{flex-basis:2.5mm;width:2.5mm;font-size:5.8pt}.footer{display:flex;align-items:center;justify-content:space-between;gap:8mm;flex:0 0 5mm;margin-top:2mm;border-top:1px solid #d5e2e9;color:#637482;font-size:6.6pt}.footer span:last-child{text-align:right}.empty-message{display:grid;place-items:center;flex:1;border:1px solid #d5e2e9;background:#f7fafb;color:#637482;font-size:10pt}@media screen{.document{box-shadow:0 4px 18px #17344d24}}@media print{body{background:#fff}.controls{display:none}.document{margin:0;box-shadow:none}}
+  </style></head><body><aside class="controls"><p>Para conservar el diseño, activa <b>Gráficos de fondo</b> y desactiva <b>Encabezados y pies de página</b>.</p><button onclick="window.print()">Imprimir / Guardar PDF</button></aside><main class="document"><header class="header"><div><h1>Programa de predicación</h1><p>${escapeHtml(congregation)}</p></div><div class="header-meta"><strong>${escapeHtml(monthLabel(program.month))}</strong>${updated ? `<span>${escapeHtml(updated)}</span>` : ''}</div></header>${appointmentsByDate.size ? `<section class="calendar"><div class="calendar-weekdays"><span>Lun</span><span>Mar</span><span>Mié</span><span>Jue</span><span>Vie</span><span>Sáb</span><span>Dom</span></div><div class="calendar-grid">${calendarMarkup}</div></section>` : '<p class="empty-message">No hay salidas para mostrar en este programa.</p>'}<footer class="footer"><span>${escapeHtml(congregation)} | Programa de predicación</span></footer></main></body></html>`;
 }
 
 export function exportOutreachPdf(data) {
@@ -56,5 +78,69 @@ export function exportOutreachPdf(data) {
   preview.document.write(buildOutreachPdfDocument(data));
   preview.document.close();
   preview.focus();
+  return true;
+}
+
+const xmlEscape = value => String(value).replace(/[&<>"']/g, character => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[character]));
+
+function downloadDataUrl(dataUrl, filename) {
+  const link = document.createElement('a');
+  link.href = dataUrl;
+  link.download = filename;
+  document.body.append(link);
+  link.click();
+  link.remove();
+}
+
+export function exportOutreachPng(data) {
+  const parsed = new DOMParser().parseFromString(buildOutreachPdfDocument(data), 'text/html');
+  const source = parsed.querySelector('.document');
+  if (!source) { window.alert('No se encontró la hoja del calendario.'); return false; }
+  const holder = document.createElement('div');
+  holder.setAttribute('aria-hidden', 'true');
+  Object.assign(holder.style, {
+    position: 'fixed', left: '-10000px', top: '0', width: '1200px', height: '850px',
+    overflow: 'hidden', background: '#fff', pointerEvents: 'none'
+  });
+  const styles = [...parsed.querySelectorAll('style')].map(style => style.textContent).join('\n');
+  holder.innerHTML = `<style>${styles}</style>${source.outerHTML}`;
+  document.body.append(holder);
+
+  window.setTimeout(() => {
+    try {
+      const sheet = holder.querySelector('.document');
+      sheet.style.margin = '0';
+      sheet.style.boxShadow = 'none';
+      const bounds = sheet.getBoundingClientRect();
+      const width = Math.ceil(bounds.width);
+      const height = Math.ceil(bounds.height);
+      if (!width || !height) throw new Error('La hoja del calendario no tiene dimensiones válidas.');
+
+      const clone = sheet.cloneNode(true);
+      clone.style.margin = '0';
+      clone.style.boxShadow = 'none';
+      const markup = new XMLSerializer().serializeToString(clone);
+      const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}"><foreignObject width="100%" height="100%"><div xmlns="http://www.w3.org/1999/xhtml" style="width:${width}px;height:${height}px"><style>${xmlEscape(`${styles}\n.document{margin:0!important;box-shadow:none!important}`)}</style>${markup}</div></foreignObject></svg>`;
+      const svgUrl = `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`;
+      const image = new Image();
+      image.onload = () => {
+        const scale = 2;
+        const canvas = document.createElement('canvas');
+        canvas.width = width * scale;
+        canvas.height = height * scale;
+        const context = canvas.getContext('2d');
+        context.scale(scale, scale);
+        context.drawImage(image, 0, 0, width, height);
+        const dataUrl = canvas.toDataURL('image/png');
+        holder.remove();
+        downloadDataUrl(dataUrl, `programa-salidas-${data.program.month}.png`);
+      };
+      image.onerror = () => { holder.remove(); window.alert('No se pudo generar la imagen PNG.'); };
+      image.src = svgUrl;
+    } catch (error) {
+      holder.remove();
+      window.alert(`No se pudo generar la imagen PNG: ${error.message}`);
+    }
+  }, 80);
   return true;
 }
