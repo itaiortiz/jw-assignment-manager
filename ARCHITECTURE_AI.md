@@ -102,9 +102,11 @@ La identidad estructural de una asignación es `date + turnId + resourceId`, no 
 
 ### Salidas de predicación
 
-El módulo de salidas conserva sus programas separados de los programas de predicación pública, pero comparte participantes y reglas de conflicto. Una cita de salida contiene `date`, `time`, `placeId` y `captainId`, además de `origin`, `protected`, `exceptionNote` y `notes`.
+El módulo de salidas conserva sus programas separados de los programas de predicación pública, pero comparte participantes y reglas de conflicto. Una cita de salida contiene `date`, `time`, `placeId` y `captainId`, además de `origin`, `protected`, `exception`, `exceptionNote` y `notes`.
 
 Los estados `Sin actividad` y `Otros planes` se almacenan como citas sin capitán ni lugar. Si no se captura una razón, se usa por defecto el nombre del estado. En la interfaz se muestran como tarjetas grises con el texto `Sin Actividad / Otros` en el resumen.
+
+Un capitán con conflicto de disponibilidad puede asignarse únicamente mediante una confirmación explícita como excepción consciente. La cita conserva el capitán seleccionado y se identifica con una tarjeta roja; el tooltip nombra al capitán y la asignación que genera el conflicto. La exportación PDF deja vacío el nombre del capitán para que la excepción no se publique como disponibilidad confirmada.
 
 `outreach.js` administra lugares, reglas de horario, programas mensuales, generación de citas, edición de asignaciones y conflictos en ambas direcciones. `outreach-pdf.js` genera la versión imprimible del programa de salidas.
 
@@ -116,7 +118,7 @@ Los estados `Sin actividad` y `Otros planes` se almacenan como citas sin capitá
 
 ### Resolución y advertencias
 
-`assignmentIsResolved` determina si una tarjeta cumple el mínimo requerido. `warningReasonsForAssignment` detecta sobrecupo, participante inactivo, falta de habilitación para un punto, falta de disponibilidad y solapamientos.
+`assignmentIsResolved` determina si una tarjeta cumple el mínimo requerido. `warningReasonsForAssignment` detecta sobrecupo, participante inactivo, falta de habilitación para un punto, falta de disponibilidad y solapamientos. En Salidas de predicación, los datos faltantes se clasifican como `Pendientes` (naranja) y los conflictos o configuraciones inválidas como `Advertencias` (rojo).
 
 `classifyProgramAssignments` divide las tarjetas en:
 

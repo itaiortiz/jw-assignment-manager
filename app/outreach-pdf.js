@@ -38,8 +38,8 @@ export function buildOutreachPdfDocument({program, places, participants, setting
     if (!appointments.length) return '';
     return `<article class="day"><h3>${escapeHtml(dayLabel(date))}</h3>${appointments.map(appointment => {
       if (appointment.inactive) return `<div class="appointment inactive"><div><strong>${escapeHtml(appointment.time)}</strong><span>Sin actividad</span></div><div class="reason"><b>Motivo</b><span>${escapeHtml(appointment.inactiveReason || 'Sin especificar')}</span></div></div>`;
-      const place = placeById.get(appointment.placeId), captain = personById.get(appointment.captainId);
-      return `<div class="appointment"><div><strong>${escapeHtml(appointment.time)}</strong><span>${escapeHtml(place?.name || 'Sin lugar de encuentro')}</span>${place?.address ? `<small>${escapeHtml(place.address)}</small>` : ''}</div><div class="captain"><b>Capitán</b><span>${escapeHtml(captain?.name || 'Sin asignar')}</span></div></div>`;
+      const place = placeById.get(appointment.placeId), captain = personById.get(appointment.captainId), captainName = appointment.exception ? '' : captain?.name || 'Sin asignar';
+      return `<div class="appointment"><div><strong>${escapeHtml(appointment.time)}</strong><span>${escapeHtml(place?.name || 'Sin lugar de encuentro')}</span>${place?.address ? `<small>${escapeHtml(place.address)}</small>` : ''}</div><div class="captain"><b>Capitán</b><span>${escapeHtml(captainName)}</span></div></div>`;
     }).join('')}</article>`;
   }).join('')}</section>`).join('');
   const congregation = settings?.congregationName || 'Congregación';

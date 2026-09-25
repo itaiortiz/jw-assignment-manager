@@ -23,4 +23,4 @@ La aplicación no requiere base de datos ni conexión a internet. Los datos se g
 
 ## Estado del proyecto
 
-Es un MVP local y offline-first. Actualmente incluye los módulos de Predicación pública y Salidas de predicación, ambos con calendarios mensuales y persistencia local. Antes de desplegarlo como servicio multiusuario habría que sustituir `localStorage` por una API y una base de datos, además de incorporar autenticación, permisos y migraciones persistentes.
+Es un MVP local y offline-first. Actualmente incluye los módulos de Predicación pública y Salidas de predicación, ambos con calendarios mensuales y persistencia local. Salidas de predicación permite marcar excepciones de disponibilidad con confirmación explícita; las tarjetas con datos faltantes se muestran en naranja y las que tienen conflictos en rojo. El tooltip explica el conflicto y el PDF deja vacío el capitán de la excepción. Antes de desplegarlo como servicio multiusuario habría que sustituir `localStorage` por una API y una base de datos, además de incorporar autenticación, permisos y migraciones persistentes.

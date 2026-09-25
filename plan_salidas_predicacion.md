@@ -17,7 +17,7 @@ Incorporar un módulo independiente de **Salidas de predicación** que comparta 
   - Lunes a sábado a las 09:00.
   - Domingo a las 09:30.
   - Martes y jueves también a las 18:00.
-- Cada cita tiene exactamente un capitán.
+- Cada cita programada puede tener un capitán; si se selecciona uno sin disponibilidad, debe confirmarse como excepción consciente.
 - Solamente los participantes activos con el rol existente `Capitan` son candidatos iniciales.
 - Una semana de visita omite las citas normales y queda identificada en el programa.
 - Una colisión se puede guardar como excepción explícita.
@@ -25,7 +25,7 @@ Incorporar un módulo independiente de **Salidas de predicación** que comparta 
 
 ## Estado de implementación
 
-El prototipo actual ya incluye la navegación separada, catálogos de lugares y horarios, programas mensuales, generación de citas, edición de capitán/lugar/estado, conflictos con predicación pública y exportación PDF. También incorpora los estados `Sin actividad` y `Otros planes`, tarjetas con indicadores por estado y referencias persistentes de mes, semana y día durante el scroll.
+El prototipo actual ya incluye la navegación separada, catálogos de lugares y horarios, programas mensuales, generación de citas, edición de capitán/lugar/estado, conflictos con predicación pública y exportación PDF. También incorpora los estados `Sin actividad` y `Otros planes`, tarjetas con indicadores por estado y referencias persistentes de mes, semana y día durante el scroll. Los datos faltantes se muestran como pendientes en naranja; los conflictos se agrupan en Advertencias rojas. Los capitanes sin disponibilidad pueden guardarse como excepciones conscientes: el tooltip explica el conflicto y el nombre del capitán se omite en el PDF.
 
 La tabla de participantes comparte los capitanes disponibles con el módulo de salidas y conserva sus encabezados y filtros durante el scroll. Su resumen muestra el total, los resultados visibles y los filtros activos.
 
@@ -74,7 +74,7 @@ Un capitán está ocupado si, en la misma fecha:
 
 Una persona asignada a predicación pública está ocupada si, en la misma fecha, tiene una cita de salida cuya hora cae dentro del turno público.
 
-El sistema mostrará el origen del conflicto: módulo, programa, lugar o punto, y horario relacionado.
+El sistema mostrará el origen del conflicto: módulo, programa, lugar o punto, y horario relacionado. Una excepción consciente conserva ese detalle para revisión, pero requiere confirmación explícita y permanece visualmente pendiente.
 
 ## Fases
 
@@ -112,6 +112,6 @@ El sistema mostrará el origen del conflicto: módulo, programa, lugar o punto, 
 - Los horarios predeterminados se crean una sola vez y son editables.
 - Los participantes con rol `Capitan` pueden identificarse sin duplicar personas.
 - Una asignación pública y una salida incompatible se señalan en ambas direcciones.
-- El usuario puede guardar una excepción de forma deliberada.
+- El usuario puede guardar una excepción de forma deliberada; la tarjeta queda roja como advertencia y el PDF deja vacío el capitán de esa cita.
 - Una semana de visita no genera citas normales.
 - El programa de salidas solo requiere PDF al finalizar la fase C.

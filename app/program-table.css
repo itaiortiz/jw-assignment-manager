@@ -195,8 +195,8 @@ html[data-theme="dark"] .manager-person.manager-exception.manager-person-clickab
 .program-summary-card.summary-warning{border-top:3px solid #c87573}.program-summary-card.summary-warning strong{color:#9f201b}
 button.program-summary-card.summary-total:hover,button.program-summary-card.summary-total.active{border-color:#4ca6df;background:#eff8fd;color:#0b5d92}
 button.program-summary-card.summary-complete:hover,button.program-summary-card.summary-complete.active{border-color:#48a56f;background:#eaf7ef;color:#176b3d}
-button.program-summary-card.summary-pending:hover,button.program-summary-card.summary-pending.active{border-color:#e5a22a;background:#fff4d7;color:#925c00}
-button.program-summary-card.summary-warning:hover,button.program-summary-card.summary-warning.active{border-color:#c87573;background:#fff0ef;color:#9f201b}
+button.program-summary-card.summary-pending.has-items,button.program-summary-card.summary-pending.has-items:hover,button.program-summary-card.summary-pending.has-items.active{border-color:#e5a22a;background:#fff4d7;color:#925c00}
+button.program-summary-card.summary-warning.has-items,button.program-summary-card.summary-warning.has-items:hover,button.program-summary-card.summary-warning.has-items.active{border-color:#c87573;background:#fff0ef;color:#9f201b}
 .slot-warning{border-left-color:#c87573!important;background:#fff9f8}.slot-warning .slot-status,.slot-status.warning{background:#fff0ef!important;color:#9f201b!important}.day-status.warning{background:#fff0ef;color:#9f201b}
 html[data-theme="dark"] .program-summary-card.summary-total{border-top-color:#4ca6df}html[data-theme="dark"] .program-summary-card.summary-total strong{color:#8fd0f8}
 html[data-theme="dark"] .program-summary-card.summary-complete{border-top-color:#66c88d}html[data-theme="dark"] .program-summary-card.summary-complete strong{color:#9be7c3}
@@ -204,8 +204,8 @@ html[data-theme="dark"] .program-summary-card.summary-pending{border-top-color:#
 html[data-theme="dark"] .program-summary-card.summary-warning{border-top-color:#c87573}html[data-theme="dark"] .program-summary-card.summary-warning strong{color:#ffd9d7}
 html[data-theme="dark"] button.program-summary-card.summary-total:hover,html[data-theme="dark"] button.program-summary-card.summary-total.active{background:#1b4058;color:#8fd0f8;border-color:#4ca6df}
 html[data-theme="dark"] button.program-summary-card.summary-complete:hover,html[data-theme="dark"] button.program-summary-card.summary-complete.active{background:#173f32;color:#9be7c3;border-color:#66c88d}
-html[data-theme="dark"] button.program-summary-card.summary-pending:hover,html[data-theme="dark"] button.program-summary-card.summary-pending.active{background:#4d3714;color:#ffda8b;border-color:#d6a54b}
-html[data-theme="dark"] button.program-summary-card.summary-warning:hover,html[data-theme="dark"] button.program-summary-card.summary-warning.active{background:#5a3032;color:#ffd9d7;border-color:#c87573}
+html[data-theme="dark"] button.program-summary-card.summary-pending.has-items,html[data-theme="dark"] button.program-summary-card.summary-pending.has-items:hover,html[data-theme="dark"] button.program-summary-card.summary-pending.has-items.active{background:#4d3714;color:#ffda8b;border-color:#d6a54b}
+html[data-theme="dark"] button.program-summary-card.summary-warning.has-items,html[data-theme="dark"] button.program-summary-card.summary-warning.has-items:hover,html[data-theme="dark"] button.program-summary-card.summary-warning.has-items.active{background:#5a3032;color:#ffd9d7;border-color:#c87573}
 html[data-theme="dark"] .slot-warning{background:#5a3032!important;border-left-color:#c87573!important}html[data-theme="dark"] .slot-warning .slot-status,html[data-theme="dark"] .slot-status.warning{background:#5a3032!important;color:#ffd9d7!important}html[data-theme="dark"] .day-status.warning{background:#5a3032;color:#ffd9d7}
 
 /* Las opciones de días también pertenecen al formulario modal. En oscuro

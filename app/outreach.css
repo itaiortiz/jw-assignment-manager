@@ -18,7 +18,7 @@ html[data-theme="dark"] .captain-option-status{color:#9be7c3}
 html[data-theme="dark"] .captain-option-status.is-unavailable{color:#ffbf8d}
 html[data-theme="dark"] .captain-no-results{color:#aebfcb}
 
-.captain-results button.is-unavailable{background:#fff4ee;color:#7c3419;cursor:not-allowed}
+.captain-results button.is-unavailable{background:#fff4ee;color:#7c3419;cursor:pointer}
 .captain-results button.is-unavailable:hover{background:#fff4ee;color:#7c3419}
 #modal [data-place-field][hidden],#modal [data-reason-field][hidden]{display:none!important}
 .outreach-program-config{margin-top:18px}
@@ -60,7 +60,7 @@ html[data-theme="dark"] .captain-no-results{color:#aebfcb}
 .outreach-agenda-captain{font-weight:750;color:#315f79}
 .outreach-agenda-item.is-unassigned .outreach-agenda-captain{color:#8a6418}
 .outreach-conflict{color:#9a3629!important}
-html[data-theme="dark"] .captain-results button.is-unavailable,html[data-theme="dark"] .captain-results button.is-unavailable:hover{background:#5a3032;color:#ffd9d7}
+html[data-theme="dark"] .captain-results button.is-unavailable,html[data-theme="dark"] .captain-results button.is-unavailable:hover{background:#5a3d20;color:#ffe0a7}
 html[data-theme="dark"] .outreach-calendar{border-color:#304354;background:#172630}
 html[data-theme="dark"] .outreach-calendar-weekdays{border-color:#304354;background:#203541;color:#c7dae6}
 html[data-theme="dark"] .outreach-calendar-day{border-color:#304354;background:#172630}
@@ -81,6 +81,12 @@ html[data-theme="dark"] .outreach-edit-date{color:#b7c8d3}
 .outreach-review-tag{display:inline-flex;align-items:center;gap:6px;margin-top:5px;padding:4px 9px;border-radius:999px;font-size:.8rem;font-weight:750}.outreach-review-tag::before{width:7px;height:7px;border-radius:50%;background:currentColor;content:""}.outreach-review-tag.editing{background:#edf2f5;color:#526674}.outreach-review-tag.reviewed{background:#e8f6ee;color:#176b3d}.outreach-regeneration-notice{margin:14px 0 0;padding:10px 12px;border-radius:8px;background:#fff3d7;color:#805b13;font-size:.9rem;font-weight:650}
 .program-summary-card.is-pending{border-color:#d89a28;background:#fff8e8;color:#795415}.program-summary-card.is-pending strong{color:#b77912}.outreach-pending-indicator{display:inline-flex;align-items:center;margin-left:8px;color:#a76b11;font-size:.78rem;font-weight:750}
 #modal [data-reason][hidden],#modal [data-place][hidden],#modal [data-captain][hidden],#modal [data-place-field][hidden],#modal [data-captain-field][hidden],#modal [data-reason-field][hidden]{display:none!important}
+#modal .outreach-exception-warning{grid-column:1/-1;display:grid;gap:5px;margin-top:2px;padding:10px 12px;border:1px solid #d89a28;border-radius:7px;background:#fff5dc;color:#795415;font-size:.83rem}
+#modal .outreach-exception-warning[hidden]{display:none!important}
+#modal .outreach-exception-warning strong{font-size:.88rem}
+#modal .outreach-exception-confirm{display:flex;align-items:center;gap:7px;font-weight:750}
+#modal .outreach-exception-confirm input{width:auto}
+html[data-theme="dark"] #modal .outreach-exception-warning{border-color:#b47b28;background:#4f3b1e;color:#ffe1a0}
 #modal:has(.captain-autocomplete){height:auto!important;max-height:calc(100vh - 24px)!important}#modal:has(.captain-autocomplete) .modal{max-height:calc(100vh - 24px)!important;overflow:hidden!important}#modal:has(.captain-autocomplete) .modal-scroll-content{overflow-y:auto!important}
 #modal .captain-autocomplete .captain-results{position:static;max-height:min(250px,32vh);margin-top:5px;box-shadow:none}
 .outreach-calendar-event.is-inactive{border-left-color:#b18a22;background:#fff7dc;color:#785a12}.outreach-calendar-event b,.outreach-calendar-event small{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
@@ -93,21 +99,23 @@ html[data-theme="dark"] .program-summary-card.is-pending{border-color:#9a712e;ba
 .program-summary-card.is-attention{border-color:#d89a28;background:#fff8e8;color:#795415}.program-summary-card.is-attention strong{color:#b77912}
 .program-summary-card.is-inactive{border-color:#8b9aa5;background:#f1f4f6;color:#53636e}.program-summary-card.is-inactive strong{color:#596a76}
 .outreach-calendar-event.is-complete{border-left-color:#39a66b;background:#f3f9fc;color:#234b64}
-.outreach-calendar-event.is-attention{border-left-color:#d89a28;background:#f3f9fc;color:#234b64}
-.outreach-calendar-event.is-unavailable{border-left-color:#7892a3;background:#f3f9fc;color:#234b64}
+.outreach-calendar-event.is-attention{border-color:#d89a28;border-left-color:#d89a28;background:#fff0c9;color:#795415}
+.outreach-calendar-event.is-unavailable{border-color:#c87573;border-left-color:#c87573;background:#fff0ef;color:#9f201b}
 .outreach-calendar-event.is-inactive{border-left-color:#8b9aa5;background:#f1f4f6;color:#53636e}
 html[data-theme="dark"] .program-summary-card.is-total{border-color:#397aa1;background:#1d3a4b;color:#c9e9fa}html[data-theme="dark"] .program-summary-card.is-total strong{color:#83cef4}
 html[data-theme="dark"] .program-summary-card.is-complete{border-color:#3b9b68;background:#183c2b;color:#b8efd0}html[data-theme="dark"] .program-summary-card.is-complete strong{color:#80e5aa}
 html[data-theme="dark"] .program-summary-card.is-attention{border-color:#9a712e;background:#4a3a1f;color:#ffe1a0}html[data-theme="dark"] .program-summary-card.is-attention strong{color:#ffd27a}
 html[data-theme="dark"] .program-summary-card.is-inactive{border-color:#667784;background:#293640;color:#d0dde4}html[data-theme="dark"] .program-summary-card.is-inactive strong{color:#b7cbd7}
 html[data-theme="dark"] .outreach-calendar-event.is-complete{border-left-color:#3eae74;background:#1e3c4c;color:#cce9f7}
-html[data-theme="dark"] .outreach-calendar-event.is-attention{border-left-color:#a77c30;background:#1e3c4c;color:#cce9f7}
-html[data-theme="dark"] .outreach-calendar-event.is-unavailable{border-left-color:#6c8fa5;background:#1e3c4c;color:#cce9f7}
+html[data-theme="dark"] .outreach-calendar-event.is-attention{border-color:#b47b28;border-left-color:#d59a32;background:#4f3b1e;color:#ffe1a0}
+html[data-theme="dark"] .outreach-calendar-event.is-unavailable{border-color:#c87573;border-left-color:#d28683;background:#5a3032;color:#ffd9d7}
 html[data-theme="dark"] .outreach-calendar-event.is-inactive{border-left-color:#6e818f;background:#293640;color:#d0dde4}
 
 /* Las tarjetas de resumen usan la misma variante visual que Predicación pública. */
 .program-summary-card.summary-inactive{border-top:3px solid #8b98a3}.program-summary-card.summary-inactive strong{color:#596a76}
 html[data-theme="dark"] .program-summary-card.summary-inactive{border-top-color:#8b98a3}html[data-theme="dark"] .program-summary-card.summary-inactive strong{color:#b8c9d3}
+.outreach-program-summary{grid-template-columns:repeat(5,minmax(0,1fr))}
+@media(max-width:1040px){.outreach-program-summary{grid-template-columns:repeat(2,minmax(0,1fr))}}
 
 /* Cabeceras compactas de cada día: evitan que el estilo global de header agrande la celda. */
 .outreach-calendar-day header{box-sizing:border-box;display:grid;width:32px;min-height:30px;height:30px;margin:0 0 5px auto;padding:0;place-items:center;align-items:center;align-content:center;justify-content:center;text-align:center;line-height:1;border:0;border-radius:50%;background:#e7f2fb;color:#173f59}
