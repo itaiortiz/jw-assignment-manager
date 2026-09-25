@@ -1,0 +1,109 @@
+# Plan de implementación - Salidas de predicación
+
+## Objetivo
+
+Incorporar un módulo independiente de **Salidas de predicación** que comparta participantes y detección de conflictos con **Predicación pública**, sin mezclar sus programas, lugares, horarios ni reglas de asignación.
+
+## Alcance confirmado
+
+- Menú:
+  - Inicio.
+  - Predicación pública: Programas, Puntos y Turnos.
+  - Salidas de predicación: Programas, Lugares de encuentro y Horarios.
+  - Participantes.
+  - Configuración: Roles y Estados.
+- Inicio no crea programas; por ahora conserva su función de resumen.
+- Las salidas usan citas puntuales configurables, no rangos obligatorios:
+  - Lunes a sábado a las 09:00.
+  - Domingo a las 09:30.
+  - Martes y jueves también a las 18:00.
+- Cada cita tiene exactamente un capitán.
+- Solamente los participantes activos con el rol existente `Capitan` son candidatos iniciales.
+- Una semana de visita omite las citas normales y queda identificada en el programa.
+- Una colisión se puede guardar como excepción explícita.
+- La exportación del nuevo módulo será solo PDF; Excel y CSV quedan fuera del alcance.
+
+## Principios de diseño
+
+1. `Programas` de predicación pública y de salidas son colecciones distintas.
+2. `Puntos` públicos y `Lugares de encuentro` son catálogos distintos.
+3. Las reglas de horario de salidas representan una fecha y hora puntual.
+4. Las asignaciones guardan su fecha y hora concreta para conservar el historial aunque se editen las reglas generales.
+5. La detección de conflictos usa una vista común de compromisos, pero cada módulo conserva su propia interfaz y reglas.
+6. Las excepciones nunca convierten un conflicto en disponibilidad: lo registran y lo hacen visible.
+
+## Modelo de datos
+
+```text
+outreach
+  places[]
+    id, name, address, notes, active
+
+  rules[]
+    id, name, weekday, time, active
+
+  programs[]
+    id, month, status, createdAt, updatedAt,
+    blocks[], visitWeeks[], assignments[]
+
+  blocks[]
+    id, startDate, endDate, placeId
+
+  visitWeeks[]
+    id, startDate, endDate, label, notes
+
+  assignments[]
+    id, date, time, placeId, captainId,
+    origin, protected, exceptionNote, notes
+```
+
+## Reglas de conflicto
+
+Un capitán está ocupado si, en la misma fecha:
+
+- Tiene otra cita de salida a la misma hora.
+- Tiene una asignación pública cuyo turno contiene la hora de la cita.
+
+Una persona asignada a predicación pública está ocupada si, en la misma fecha, tiene una cita de salida cuya hora cae dentro del turno público.
+
+El sistema mostrará el origen del conflicto: módulo, programa, lugar o punto, y horario relacionado.
+
+## Fases
+
+### Fase A - Terra High: arquitectura crítica
+
+- Guardar este plan en el proyecto.
+- Reorganizar la navegación para reflejar los dos módulos.
+- Incorporar el esquema de datos de salidas y las reglas iniciales de horario.
+- Crear el módulo aislado de Salidas de predicación.
+- Implementar catálogo base de lugares y horarios.
+- Implementar el servicio común de conflictos en ambas direcciones.
+- Proteger la compatibilidad de predicación pública con pruebas manuales de navegación.
+
+### Fase B - Terra Medium: flujo operativo
+
+- Constructor de programas mensuales.
+- Bloques de fechas y lugares.
+- Semanas de visita.
+- Generación de citas.
+- Selector de capitanes y guardado con excepción.
+- Vista mensual, publicación e historial.
+
+### Fase C - Terra Medium: entrega
+
+- Exportación PDF para salidas.
+- Revisión visual e impresión.
+- Captura inicial de agosto de 2026 con conciliación manual de nombres.
+- Pruebas de regresión de ambos módulos.
+
+## Criterios de aceptación
+
+- La predicación pública conserva su funcionamiento y sus programas existentes.
+- La barra lateral separa claramente ambos módulos.
+- Lugares y horarios de salidas se administran sin afectar Puntos ni Turnos públicos.
+- Los horarios predeterminados se crean una sola vez y son editables.
+- Los participantes con rol `Capitan` pueden identificarse sin duplicar personas.
+- Una asignación pública y una salida incompatible se señalan en ambas direcciones.
+- El usuario puede guardar una excepción de forma deliberada.
+- Una semana de visita no genera citas normales.
+- El programa de salidas solo requiere PDF al finalizar la fase C.

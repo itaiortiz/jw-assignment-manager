@@ -1,5 +1,7 @@
 import {reportRows} from './report-import.js';
 import {exportPublicPdf} from './pdf-export.js';
+import {createOutreachModule} from './outreach.js';
+import {exportOutreachPdf} from './outreach-pdf.js';
 const reportResources=[{"name":"Adriana Gonz\u00e1lez","resourceCodes":["C2","EX1"]},{"name":"Alan de la Cruz","resourceCodes":["C1"]},{"name":"Americo Salas C.","resourceCodes":["C1","EX1"]},{"name":"Americo Salas Y.","resourceCodes":["C1","EX1"]},{"name":"Americo Salas Ya\u00f1ez","resourceCodes":["C2"]},{"name":"Ana de Carrillo","resourceCodes":["C1"]},{"name":"Aracely G\u00e1mez","resourceCodes":["C1","C2"]},{"name":"Aracely Nieto","resourceCodes":["C1"]},{"name":"Bertha Alicia de Moreno","resourceCodes":["C2"]},{"name":"Blanca Jim\u00e9nez de T.","resourceCodes":["C1","C2"]},{"name":"Blanca Torres","resourceCodes":["C1"]},{"name":"Claudia de P\u00e9rez","resourceCodes":["C1","C2"]},{"name":"Conchis de Hern\u00e1ndez","resourceCodes":["C1"]},{"name":"Cristina de Carrizalez","resourceCodes":["C2"]},{"name":"Diana de Garc\u00eda","resourceCodes":["C2"]},{"name":"Eliseo Guerra","resourceCodes":["C2"]},{"name":"Elizabeth Fuerte de Gonz\u00e1lez","resourceCodes":["EX1"]},{"name":"Emilia de Cordoba","resourceCodes":["C1","C2"]},{"name":"Enrique Ruan","resourceCodes":["C1"]},{"name":"Ester de Alferez","resourceCodes":["C1","C2"]},{"name":"Familia Pardo","resourceCodes":["C2"]},{"name":"Familia Ruan","resourceCodes":["C2"]},{"name":"Graciela Hern\u00e1ndez","resourceCodes":["C1","C2"]},{"name":"Graciera Hernandez","resourceCodes":["C2"]},{"name":"Griselda Vazquez","resourceCodes":["C1"]},{"name":"Guillermina de Casta\u00f1eda","resourceCodes":["C2"]},{"name":"Guillermina de la Cruz","resourceCodes":["C2"]},{"name":"Itai Ortiz","resourceCodes":["C1","C2"]},{"name":"Janai Mata","resourceCodes":["C2"]},{"name":"Juany de Mata","resourceCodes":["C1"]},{"name":"Juany de Velazquez","resourceCodes":["C2","EX1"]},{"name":"Juliana de Reyes","resourceCodes":["C1","C2"]},{"name":"Lety de Aguilar","resourceCodes":["C2"]},{"name":"Luis Mata","resourceCodes":["C1"]},{"name":"Luis Vitela","resourceCodes":["C1","EX1"]},{"name":"Luisita","resourceCodes":["C1","EX1"]},{"name":"Marisela de Salas","resourceCodes":["C1","C2"]},{"name":"Merari Aguilar","resourceCodes":["C1"]},{"name":"Miguel Carrillo","resourceCodes":["C1"]},{"name":"Nallely Guerrero","resourceCodes":["C2"]},{"name":"Octavia de Castro","resourceCodes":["C1"]},{"name":"Priscila de Rivera","resourceCodes":["C1","C2","EX1"]},{"name":"Ruben Velazquez","resourceCodes":["C2","EX1"]},{"name":"Sarah\u00ed de Flores","resourceCodes":["C2"]},{"name":"Svetlana Gonz\u00e1lez","resourceCodes":["EX1"]},{"name":"Tavita de Castro","resourceCodes":["C1","C2"]},{"name":"Vivi de Ruan","resourceCodes":["C1","EX1"]},{"name":"Viviana de Ruan","resourceCodes":["C1","EX1"]},{"name":"Wendy de Hernandez","resourceCodes":["C2"]},{"name":"Yasmin Ayala","resourceCodes":["C1"]},{"name":"Yasmin de Vitela","resourceCodes":["EX1"]}];
 const KEY='predicacion.mvp.v1',REPORT_IMPORT_KEY='predicacion.report-import.v1',REPORT_RESOURCE_IMPORT_KEY='predicacion.report-resources.v1',THEME_KEY='predicacion.theme',SIDEBAR_KEY='predicacion.sidebar-collapsed';
 const RESOURCE_ENABLEMENT_MIGRATION_KEY='predicacion.enable-all-current-participants.v1';
@@ -48,11 +50,11 @@ function shell(html){document.querySelector('#app').innerHTML=html;replaceRoleTe
 function congregationDialog(){modal(`<div class="toolbar"><div><span class="eyebrow">Configuración local</span><h2>Congregación</h2></div><button type="button" class="icon-button" title="Cerrar" aria-label="Cerrar" data-close>×</button></div><div class="form"><label>Nombre de la congregación<input name="congregationName" required value="${esc(db.settings.congregationName)}"></label></div><div class="modal-actions"><button type="button" data-close>Cancelar</button><button class="primary">Guardar</button></div>`,(f,m)=>{const name=f.get('congregationName').trim();if(!name)return formError('Escribe el nombre de la congregación.');db.settings.congregationName=name;save('Actualización de congregación',name);m.close()})}
 function setupHeaderSystem(){const header=document.querySelector('.workspace>header');if(!header)return;header.innerHTML=`<div class="header-spacer" aria-hidden="true"></div><details class="header-system"><summary title="Opciones y datos de la aplicación">Opciones <b>⌄</b></summary><div><button type="button" id="congregationBtn"><span>⌂</span>Congregación</button><button type="button" id="headerHistoryBtn"><span>◷</span>Historial de actividad</button><button type="button" id="backupBtn"><span>↑</span>Exportar datos</button><label class="header-system-file"><span>↓</span>Importar datos<input id="restoreInput" type="file" accept="application/json" hidden></label><label class="theme-toggle"><span aria-hidden="true">◐</span><span>Modo oscuro</span><input id="themeToggle" type="checkbox" role="switch" aria-label="Modo oscuro" ${document.documentElement.dataset.theme==='dark'?'checked':''}></label></div></details>`;const programNav=document.querySelector('#nav [data-view="program"]'),roleNav=document.querySelector('#nav [data-view="types"]');if(programNav){programNav.dataset.view='programs';programNav.innerHTML='<span>▤</span>Programas'}if(roleNav)roleNav.textContent='Roles';document.querySelector('#systemToggle')?.remove();document.querySelector('#systemMenu')?.remove();document.querySelector('#congregationBtn').onclick=congregationDialog;document.querySelector('#headerHistoryBtn').onclick=()=>{view='history';document.querySelectorAll('#nav button[data-view]').forEach(button=>button.classList.toggle('active',button.dataset.view===view));render()};document.querySelector('#themeToggle').onchange=event=>setTheme(event.target.checked?'dark':'light');const optionsMenu=header.querySelector('.header-system');optionsMenu.querySelector('div').addEventListener('click',()=>optionsMenu.open=false);document.addEventListener('click',event=>{if(optionsMenu.open&&!optionsMenu.contains(event.target))optionsMenu.open=false})}
 setupHeaderSystem();
-function applyCongregationName(){const brandTitle=document.querySelector('.sidebar-brand strong'),brandSubtitle=document.querySelector('.sidebar-brand small');if(brandTitle)brandTitle.textContent='Predicación Pública';if(brandSubtitle)brandSubtitle.textContent=db.settings.congregationName}
+function applyCongregationName(){const brandTitle=document.querySelector('.sidebar-brand strong'),brandSubtitle=document.querySelector('.sidebar-brand small');if(brandTitle)brandTitle.textContent='Predicación';if(brandSubtitle)brandSubtitle.textContent=db.settings.congregationName}
 applyCongregationName();
 function setupSidebarCollapse(){const sidebar=document.querySelector('.sidebar'),button=document.querySelector('#sidebarCollapse');if(!sidebar||!button)return;document.querySelectorAll('#nav button').forEach(control=>{control.title||=control.textContent.trim().replace(/[⌂◉▦⚙⌄›]/g,'').trim()});const apply=collapsed=>{const label=collapsed?'Expandir menú':'Contraer menú';sidebar.classList.toggle('collapsed',collapsed);button.setAttribute('aria-expanded',String(!collapsed));button.setAttribute('aria-label',label);button.title=label;button.querySelector('[aria-hidden]').textContent=collapsed?'›':'‹';button.querySelector('.sidebar-collapse-label').textContent=label;localStorage.setItem(SIDEBAR_KEY,String(collapsed))};button.onclick=()=>apply(!sidebar.classList.contains('collapsed'));apply(localStorage.getItem(SIDEBAR_KEY)==='true')}
 setupSidebarCollapse();
-const programNavigation=document.querySelector('#nav [data-view="programs"]'),participantNavigation=document.querySelector('#nav [data-view="participants"]');if(programNavigation&&participantNavigation)participantNavigation.before(programNavigation);
+// El orden del menú se define explícitamente en index.html para conservar cada módulo agrupado.
 new MutationObserver(()=>replaceRoleText(document.querySelector('#modal'))).observe(document.querySelector('#modal'),{childList:true,subtree:true});
 function modal(html,submit){const el=document.querySelector('#modal');el.style.height='';el.style.maxHeight='';el.innerHTML=`<form method="dialog" class="modal" id="modalForm">${html}</form>`;el.querySelectorAll('.toolbar button[data-close]').forEach(button=>{if(button.textContent.trim()!=='Cerrar')return;button.className='icon-button';button.title='Cerrar';button.setAttribute('aria-label','Cerrar');button.textContent='×'});const grid=el.querySelector('.availability-grid');el.classList.toggle('compact-form-modal',!grid);el.showModal();if(grid){const name=el.querySelector('[name="name"]')?.value,person=db.participants.find(x=>x.name===name);grid.insertAdjacentHTML('afterend',`<div class="availability-heading frequency-heading"><div><span class="eyebrow">Frecuencia</span><h3>Recurrencia</h3></div><div class="frequency-control"><input name="frequencyCount" aria-label="Veces por frecuencia" type="number" min="1" max="52" step="1" value="${person?.frequencyCount??1}" required><span>veces cada</span><input name="frequencyWeeks" aria-label="Semanas por frecuencia" type="number" min="1" max="52" step="1" value="${person?.frequencyWeeks??1}" required><span>semanas</span></div></div>`)}const form=el.querySelector('#modalForm'),footer=form?.querySelector('.modal-actions');if(form&&footer){const content=document.createElement('div');content.className='modal-scroll-content';[...form.children].filter(node=>node!==footer&&!node.matches('.toolbar,.participant-tabs')).forEach(node=>content.append(node));form.insertBefore(content,footer);content.scrollTop=0}el.querySelectorAll('[data-close]').forEach(b=>b.onclick=()=>el.close());el.querySelector('#modalForm').onsubmit=e=>{e.preventDefault();const formData=new FormData(e.currentTarget);submit(formData,el);if(grid){const person=db.participants.find(x=>x.name===formData.get('name'));if(person){person.frequencyCount=Math.max(1,Math.min(52,Math.floor(Number(formData.get('frequencyCount'))||1)));person.frequencyWeeks=Math.max(1,Math.min(52,Math.floor(Number(formData.get('frequencyWeeks'))||1)));localStorage.setItem(KEY,JSON.stringify(db))}}}}
 function confirmDialog({title,message,confirmLabel='Eliminar',onConfirm}){const el=document.querySelector('#modal');el.classList.remove('compact-form-modal');el.style.height='fit-content';el.style.maxHeight='calc(100vh - 32px)';el.innerHTML=`<form method="dialog" class="modal confirm-modal"><div class="confirm-icon">!</div><div class="confirm-copy"><span class="eyebrow">Confirmación</span><h2>${esc(title)}</h2><p>${esc(message)}</p></div><div class="modal-actions"><button type="button" data-close>Cancelar</button><button type="button" class="danger confirm-action" data-confirm>${esc(confirmLabel)}</button></div></form>`;el.showModal();el.style.height=`${el.firstElementChild.getBoundingClientRect().height}px`;el.querySelector('[data-close]').onclick=()=>el.close();el.querySelector('[data-confirm]').onclick=()=>{onConfirm();el.close()};el.querySelector('[data-close]').focus()}
@@ -83,8 +85,8 @@ function resources(){shell(`<div class="card"><div class="toolbar"><div><h2>Punt
 function availability(){const p=db.participants.find(x=>x.id===availabilityId)||db.participants[0],turns=db.turns.filter(x=>x.active);shell(`<div class="card"><h2>Disponibilidad</h2><p class="muted">También puede editarse al abrir la ficha de un participante.</p>${p?`<form id="availabilityForm"><label>Participante<select id="availabilityParticipant">${db.participants.map(x=>`<option value="${x.id}" ${selected(x.id===p.id)}>${esc(x.name)}${x.active?'':' (inactivo)'}</option>`).join('')}</select></label><div class="checkgrid">${turns.flatMap(t=>days.map((d,i)=>`<label><input type="checkbox" name="slot" value="${t.id}|${i}" ${checked(db.availabilities.some(a=>a.participantId===p.id&&a.turnId===t.id&&a.day===i))}>${d} · ${esc(t.name)}</label>`)).join('')}</div><div class="modal-actions"><button type="button" data-action="clearAvailability" data-id="${p.id}">Eliminar disponibilidad</button><button class="primary">Guardar disponibilidad</button></div></form>`:'<p class="empty">Crea un participante para registrar disponibilidad.</p>'}</div>`);document.querySelector('#availabilityParticipant')?.addEventListener('change',e=>{availabilityId=e.target.value;availability()});document.querySelector('#availabilityForm')?.addEventListener('submit',e=>{e.preventDefault();const f=new FormData(e.currentTarget);db.availabilities=db.availabilities.filter(a=>a.participantId!==p.id);f.getAll('slot').forEach(v=>{const [turnId,day]=v.split('|');db.availabilities.push({participantId:p.id,turnId,day:+day})});save('Actualización de disponibilidad',p.name);availability()})}
 const iso=d=>d.toISOString().slice(0,10),assignmentCount=id=>db.programs.flatMap(p=>p.assignments).filter(a=>a.participantIds.includes(id)).length,timeOverlap=(a,b)=>a&&b&&a.start<b.end&&b.start<a.end;
 const resourceAvailable=(participantId,resourceId)=>db.participantResources.some(x=>x.participantId===participantId&&x.resourceId===resourceId);
-const availableForAssignment=(participantId,assignment,program)=>{const turn=db.turns.find(item=>item.id===assignment.turnId),day=new Date(`${assignment.date}T12:00:00`).getDay();if(!turn||!resourceAvailable(participantId,assignment.resourceId)||!db.availabilities.some(item=>item.participantId===participantId&&item.turnId===turn.id&&item.day===day))return false;return !program.assignments.some(other=>other.id!==assignment.id&&other.date===assignment.date&&other.participantIds.includes(participantId)&&timeOverlap(db.turns.find(item=>item.id===other.turnId),turn))};
-function generate(month){const [y,m]=month.split('-').map(Number),out=[];for(const d=new Date(y,m-1,1);d.getMonth()===m-1;d.setDate(d.getDate()+1)){const day=d.getDay();for(const t of db.turns.filter(t=>t.active&&t.days.includes(day)))for(const r of db.resources.filter(r=>r.active)){const minimum=Math.max(1,r.minParticipants??2),ids=[];const candidates=db.participants.filter(p=>p.active&&resourceAvailable(p.id,r.id)&&db.availabilities.some(a=>a.participantId===p.id&&a.turnId===t.id&&a.day===day)).sort((a,b)=>assignmentCount(a.id)-assignmentCount(b.id));for(const person of candidates){const blocked=out.some(a=>a.date===iso(d)&&a.participantIds.includes(person.id)&&timeOverlap(db.turns.find(x=>x.id===a.turnId),t));if(!blocked&&ids.length<minimum)ids.push(person.id)}out.push({id:uid(),date:iso(d),turnId:t.id,resourceId:r.id,participantIds:ids,origin:'automática',protected:false})}}return out}
+let availableForAssignment=(participantId,assignment,program)=>{const turn=db.turns.find(item=>item.id===assignment.turnId),day=new Date(`${assignment.date}T12:00:00`).getDay();if(!turn||!resourceAvailable(participantId,assignment.resourceId)||!db.availabilities.some(item=>item.participantId===participantId&&item.turnId===turn.id&&item.day===day))return false;return !program.assignments.some(other=>other.id!==assignment.id&&other.date===assignment.date&&other.participantIds.includes(participantId)&&timeOverlap(db.turns.find(item=>item.id===other.turnId),turn))};
+function generate(month){const [y,m]=month.split('-').map(Number),out=[];for(const d=new Date(y,m-1,1);d.getMonth()===m-1;d.setDate(d.getDate()+1)){const day=d.getDay();for(const t of db.turns.filter(t=>t.active&&t.days.includes(day)))for(const r of db.resources.filter(r=>r.active)){const minimum=Math.max(1,r.minParticipants??2),ids=[];const candidates=db.participants.filter(p=>p.active&&resourceAvailable(p.id,r.id)&&db.availabilities.some(a=>a.participantId===p.id&&a.turnId===t.id&&a.day===day)).sort((a,b)=>assignmentCount(a.id)-assignmentCount(b.id));for(const person of candidates){const publicAssignment={date:iso(d),turnId:t.id};const blocked=out.some(a=>a.date===iso(d)&&a.participantIds.includes(person.id)&&timeOverlap(db.turns.find(x=>x.id===a.turnId),t))||outreachModule.conflictsForPublicAssignment(person.id,publicAssignment).length>0;if(!blocked&&ids.length<minimum)ids.push(person.id)}out.push({id:uid(),date:iso(d),turnId:t.id,resourceId:r.id,participantIds:ids,origin:'automática',protected:false})}}return out}
 function newProgram(){const month=new Date().toISOString().slice(0,7);shell(`<div class="card"><h2>Nuevo programa mensual</h2><form id="monthForm" class="form"><label>Mes<input name="month" type="month" value="${month}" required></label><button class="primary">Generar borrador</button></form></div>`);document.querySelector('#monthForm').onsubmit=e=>{e.preventDefault();const month=new FormData(e.target).get('month'),p={id:uid(),month,status:'Borrador',updatedAt:now(),assignments:generate(month)};db.programs.unshift(p);save('Creación de programa',month);openProgram(p.id)}}
 function validate(p){const result=[];for(const a of p.assignments){const resource=db.resources.find(x=>x.id===a.resourceId),minimum=Math.max(1,resource?.minParticipants??2);if(a.participantIds.length<minimum)result.push(`${a.date}: ${resource?.name||'El punto'} requiere ${minimum} participante(s)`);for(const id of a.participantIds){const person=db.participants.find(x=>x.id===id);if(!person?.active)result.push(`${a.date}: participante inactivo`);if(!resourceAvailable(id,a.resourceId))result.push(`${a.date}: ${person?.name} no está habilitado para este punto`);if(!db.availabilities.some(item=>item.participantId===id&&item.turnId===a.turnId&&item.day===new Date(`${a.date}T12:00:00`).getDay()))result.push(`${a.date}: ${person?.name} no está disponible en este turno`);for(const b of p.assignments)if(a.id!==b.id&&a.date===b.date&&b.participantIds.includes(id)&&timeOverlap(db.turns.find(t=>t.id===a.turnId),db.turns.find(t=>t.id===b.turnId)))result.push(`${a.date}: solapamiento de ${person?.name}`)}}return [...new Set(result)]}
 function openProgram(id){const p=db.programs.find(x=>x.id===id);if(!p)return;const people=db.participants.filter(x=>x.active),minimumFor=a=>Math.max(1,db.resources.find(x=>x.id===a.resourceId)?.minParticipants??2),pending=p.assignments.filter(a=>a.participantIds.length<minimumFor(a)),complete=p.assignments.length-pending.length,issues=validate(p),otherIssues=issues.filter(issue=>!issue.includes('requiere')).length,shown=programScope==='pending'?pending:p.assignments,groups=shown.reduce((all,a)=>{(all[a.date]??=[]).push(a);return all},{}),dateLabel=date=>new Date(`${date}T12:00:00`).toLocaleDateString('es-MX',{weekday:'long',day:'numeric',month:'long'});shell(`<section class="program-head card"><div class="toolbar"><div><span class="eyebrow">Plan mensual</span><h2>Programa ${esc(formatMonth(p.month))}</h2><span class="tag">${esc(p.status)}</span></div><div class="program-tools"><button class="primary" data-action="regenerate" data-id="${p.id}">Revisar pendientes</button><button data-action="publish" data-id="${p.id}">Publicar</button><button data-action="export" data-id="${p.id}">Exportar CSV</button><button data-action="print">Imprimir/PDF</button></div></div><p class="program-message ${pending.length?'has-pending':'is-complete'}">${pending.length?`Hay ${pending.length} asignaciones que necesitan participantes.`:'Todas las asignaciones tienen los participantes mínimos.'}</p>${otherIssues?`<p class="program-note">Hay ${otherIssues} detalle(s) adicional(es) que conviene revisar antes de publicar.</p>`:''}</section><section class="program-summary" aria-label="Resumen del programa"><button type="button" class="program-summary-card ${programScope==='pending'?'active':''}" data-action="setProgramScope" data-pid="${p.id}" data-scope="pending" aria-pressed="${programScope==='pending'}"><span>Pendientes</span><strong>${pending.length}</strong><small>necesitan participantes</small></button><button type="button" class="program-summary-card ${programScope==='all'?'active':''}" data-action="setProgramScope" data-pid="${p.id}" data-scope="all" aria-pressed="${programScope==='all'}"><span>Completas</span><strong>${complete}</strong><small>cumplen el mínimo</small></button><div class="program-summary-card static"><span>Total</span><strong>${p.assignments.length}</strong><small>asignaciones del mes</small></div></section><section class="program-agenda card"><div class="agenda-heading"><div><span class="eyebrow">Agenda</span><h3>${programScope==='pending'?'Pendientes por resolver':'Todas las asignaciones'}</h3></div><p class="muted">${programScope==='pending'?'Abre una tarjeta y asigna a las personas disponibles.':'Consulta o ajusta las asignaciones por fecha.'}</p></div>${Object.keys(groups).length?Object.entries(groups).map(([date,assignments])=>{const dayPending=assignments.filter(a=>a.participantIds.length<minimumFor(a)).length;return `<section class="program-day"><header><div><span class="day-date">${esc(dateLabel(date))}</span><small>${esc(date)}</small></div><span class="day-status ${dayPending?'pending':'ready'}">${dayPending?`${dayPending} pendiente${dayPending===1?'':'s'}`:'Completo'}</span></header><div class="program-slots">${assignments.map(a=>{const t=db.turns.find(x=>x.id===a.turnId),r=db.resources.find(x=>x.id===a.resourceId),minimum=minimumFor(a),missing=Math.max(0,minimum-a.participantIds.length),availablePeople=people.filter(person=>availableForAssignment(person.id,a,p)),assigned=a.participantIds.map(personId=>db.participants.find(x=>x.id===personId)?.name).filter(Boolean),isPending=missing>0;return `<article class="program-slot ${isPending?'slot-pending':'slot-ready'}"><div class="slot-top"><div><span class="slot-time">${esc(t?.name||'Turno')}</span><small>${t?.start||'--:--'} – ${t?.end||'--:--'}</small></div><span class="slot-status">${isPending?`Falta ${missing}`:'Completo'}</span></div><h4>${esc(r?.name||'Punto')}</h4><p class="slot-minimum">Mínimo: ${minimum} participante${minimum===1?'':'s'}</p><div class="assigned-people">${assigned.length?assigned.map(name=>`<span>${esc(name)}</span>`).join(''):'<em>Sin participantes asignados</em>'}</div><details class="assignment-editor"><summary>${isPending?'Asignar participantes':'Ver o editar participantes'}</summary><label>Participantes disponibles<select multiple data-assignment="${a.id}">${availablePeople.map(person=>`<option value="${person.id}" ${selected(a.participantIds.includes(person.id))}>${esc(person.name)}</option>`).join('')}</select></label><div class="assignment-actions"><button class="primary" data-action="saveAssignment" data-pid="${p.id}" data-aid="${a.id}">Guardar asignación</button><button type="button" data-action="protect" data-pid="${p.id}" data-aid="${a.id}">${a.protected?'Desbloquear':'Bloquear'}</button></div></details></article>`}).join('')}</div></section>`}).join(''):`<div class="agenda-empty"><strong>Todo está cubierto.</strong><p>No quedan asignaciones pendientes. Puedes consultar el mes completo desde “Completas”.</p></div>`}</section>`)}
@@ -288,7 +290,7 @@ document.addEventListener('change',event=>{const input=event.target.closest('[da
 document.addEventListener('click',event=>{const participantButton=event.target.closest('[data-calendar-participant]');if(participantButton){event.preventDefault();event.stopImmediatePropagation();const person=db.participants.find(item=>item.id===participantButton.dataset.calendarParticipant),content=document.querySelector('.content-shell');if(person)return participantDialog(person,{programId:participantButton.dataset.programId,scrollTop:content?.scrollTop||0})}const slot=event.target.closest('.calendar-card-interactive');if(!slot||event.target.closest('button,input,label'))return;event.preventDefault();assignmentDialog(slot.dataset.programId,slot.dataset.assignmentId)},true);
 document.addEventListener('keydown',event=>{const slot=event.target.closest('.calendar-card-interactive');if(!slot||event.target!==slot||!['Enter',' '].includes(event.key))return;event.preventDefault();assignmentDialog(slot.dataset.programId,slot.dataset.assignmentId)},true);
 
-const assignmentWarningReason=(person,assignment,program)=>{if(!person?.active)return 'Participante inactivo';if(!resourceAvailable(person.id,assignment.resourceId))return 'No está habilitado para este punto';const turn=db.turns.find(item=>item.id===assignment.turnId),day=new Date(`${assignment.date}T12:00:00`).getDay();if(!db.availabilities.some(item=>item.participantId===person.id&&item.turnId===assignment.turnId&&item.day===day))return 'Sin disponibilidad para este turno';if(program.assignments.some(other=>other.id!==assignment.id&&other.date===assignment.date&&other.participantIds.includes(person.id)&&timeOverlap(db.turns.find(item=>item.id===other.turnId),turn)))return 'Tiene otro turno asignado a esa hora';return ''};
+let assignmentWarningReason=(person,assignment,program)=>{if(!person?.active)return 'Participante inactivo';if(!resourceAvailable(person.id,assignment.resourceId))return 'No está habilitado para este punto';const turn=db.turns.find(item=>item.id===assignment.turnId),day=new Date(`${assignment.date}T12:00:00`).getDay();if(!db.availabilities.some(item=>item.participantId===person.id&&item.turnId===turn.id&&item.day===day))return 'Sin disponibilidad para este turno';if(program.assignments.some(other=>other.id!==assignment.id&&other.date===assignment.date&&other.participantIds.includes(person.id)&&timeOverlap(db.turns.find(item=>item.id===other.turnId),turn)))return 'Tiene otro turno asignado a esa hora';return ''};
 const addAssignmentWarningHints=enhanceAssignmentEditors;
 enhanceAssignmentEditors=function(){addAssignmentWarningHints();document.querySelectorAll('.program-slot').forEach(slot=>{const programId=slot.dataset.programId||slot.querySelector('[data-pid]')?.dataset.pid,assignmentId=slot.dataset.assignmentId||slot.querySelector('[data-aid]')?.dataset.aid,program=db.programs.find(item=>item.id===programId),assignment=program?.assignments.find(item=>item.id===assignmentId);if(!program||!assignment)return;slot.querySelectorAll('.assigned-chip').forEach((chip,index)=>{const person=db.participants.find(item=>item.id===assignment.participantIds[index]),reason=assignmentWarningReason(person,assignment,program);if(!person||!reason)return;const message=`${person.name}: ${reason}`;chip.classList.add('assignment-exception');chip.title=message;chip.setAttribute('aria-label',message);const nameButton=chip.querySelector('.calendar-participant-name,.agenda-participant-name');if(nameButton){nameButton.title=`Editar participante · ${reason}`;nameButton.setAttribute('aria-label',`Editar participante ${person.name} · ${reason}`)}})})};
 const originalAssignmentDialog=assignmentDialog;
@@ -297,7 +299,7 @@ const normalizeAssignmentManager=assignmentDialog;
 assignmentDialog=function(programId,assignmentId){normalizeAssignmentManager(programId,assignmentId);const dialog=document.querySelector('#modal'),program=db.programs.find(item=>item.id===programId),assignment=program?.assignments.find(item=>item.id===assignmentId),manager=dialog?.querySelector('.assignment-manager');if(!dialog||!assignment||!manager)return;const sync=()=>{manager.querySelectorAll('.manager-person.manager-exception,.manager-candidate.manager-exception').forEach(row=>{const identity=[...row.children].find(child=>child.tagName==='SPAN'&&!child.classList.contains('participant-avatar')),nameNode=identity&&[...identity.childNodes].find(node=>node.nodeType===3&&node.textContent.trim()),person=nameNode&&db.participants.find(item=>item.name===nameNode.textContent.trim()),warning=identity?.querySelector('small');if(!identity||!warning)return;const reason=person?assignmentWarningReason(person,assignment,program):(warning.dataset.reason||'Revisar disponibilidad');if(nameNode){const name=document.createElement('span');name.className='manager-person-name';name.textContent=nameNode.textContent.trim();nameNode.replaceWith(name)}if(warning.textContent.trim()!=='!'||warning.className!=='exception-indicator'){warning.className='exception-indicator';warning.textContent='!'}if(warning.title!==reason)warning.title=reason;if(warning.getAttribute('aria-label')!==reason)warning.setAttribute('aria-label',reason);if(warning.dataset.reason!==reason)warning.dataset.reason=reason;if(row.title!==reason)row.title=reason})};sync();const observer=new MutationObserver(sync);observer.observe(manager,{childList:true,subtree:true});dialog.addEventListener('close',()=>observer.disconnect(),{once:true})};
 const addAssignmentRowInteraction=assignmentDialog;
 assignmentDialog=function(programId,assignmentId){addAssignmentRowInteraction(programId,assignmentId);const dialog=document.querySelector('#modal'),manager=dialog?.querySelector('.assignment-manager');if(!dialog||!manager)return;const prepareRows=()=>{manager.querySelectorAll('.manager-person').forEach(row=>{const remove=row.querySelector('button[data-remove]');if(!remove)return;row.classList.add('manager-person-clickable');row.setAttribute('role','button');row.setAttribute('tabindex','0');const identity=[...row.children].find(child=>child.tagName==='SPAN'&&!child.classList.contains('participant-avatar')),label=identity?.textContent.replace('!','').trim()||'participante';row.setAttribute('aria-label',`Quitar ${label}`)})};const removeOnClick=event=>{const row=event.target.closest('.manager-person.manager-person-clickable');if(!row||!manager.contains(row)||event.target.closest('button[data-remove]'))return;const remove=row.querySelector('button[data-remove]');if(!remove)return;event.preventDefault();remove.click()};const removeOnKeydown=event=>{if(!['Enter',' '].includes(event.key))return;const row=event.target.closest('.manager-person.manager-person-clickable');if(!row||!manager.contains(row))return;const remove=row.querySelector('button[data-remove]');if(!remove)return;event.preventDefault();remove.click()};prepareRows();manager.addEventListener('click',removeOnClick);manager.addEventListener('keydown',removeOnKeydown);const rowObserver=new MutationObserver(prepareRows);rowObserver.observe(manager,{childList:true,subtree:true});dialog.addEventListener('close',()=>{rowObserver.disconnect();manager.removeEventListener('click',removeOnClick);manager.removeEventListener('keydown',removeOnKeydown)},{once:true})};
-const warningReasonsForAssignment=(program,assignment)=>{const resource=db.resources.find(item=>item.id===assignment.resourceId),turn=db.turns.find(item=>item.id===assignment.turnId),maximum=maximumForResource(resource),reasons=[];if((assignment.participantIds?.length||0)>maximum)reasons.push('Sobrecupo');for(const participantId of assignment.participantIds||[]){const person=db.participants.find(item=>item.id===participantId);if(!person?.active){reasons.push('Participante inactivo');continue}if(!resourceAvailable(participantId,assignment.resourceId))reasons.push(`${person.name}: no está habilitado para este punto`);const day=new Date(`${assignment.date}T12:00:00`).getDay();if(!db.availabilities.some(item=>item.participantId===participantId&&item.turnId===assignment.turnId&&item.day===day))reasons.push(`${person.name}: sin disponibilidad para este turno`);if(program.assignments.some(other=>other.id!==assignment.id&&other.date===assignment.date&&other.participantIds.includes(participantId)&&timeOverlap(db.turns.find(item=>item.id===other.turnId),turn)))reasons.push(`${person.name}: tiene otro turno asignado a esa hora`)}return [...new Set(reasons)]};
+let warningReasonsForAssignment=(program,assignment)=>{const resource=db.resources.find(item=>item.id===assignment.resourceId),turn=db.turns.find(item=>item.id===assignment.turnId),maximum=maximumForResource(resource),reasons=[];if((assignment.participantIds?.length||0)>maximum)reasons.push('Sobrecupo');for(const participantId of assignment.participantIds||[]){const person=db.participants.find(item=>item.id===participantId);if(!person?.active){reasons.push('Participante inactivo');continue}if(!resourceAvailable(participantId,assignment.resourceId))reasons.push(`${person.name}: no está habilitado para este punto`);const day=new Date(`${assignment.date}T12:00:00`).getDay();if(!db.availabilities.some(item=>item.participantId===participantId&&item.turnId===assignment.turnId&&item.day===day))reasons.push(`${person.name}: sin disponibilidad para este turno`);if(program.assignments.some(other=>other.id!==assignment.id&&other.date===assignment.date&&other.participantIds.includes(participantId)&&timeOverlap(db.turns.find(item=>item.id===other.turnId),turn)))reasons.push(`${person.name}: tiene otro turno asignado a esa hora`)}return [...new Set(reasons)]};
 const unavailableReasonForAssignment=assignment=>{const turn=db.turns.find(item=>item.id===assignment.turnId),resource=db.resources.find(item=>item.id===assignment.resourceId),day=new Date(`${assignment.date}T12:00:00`).getDay();if(!turn)return 'Este turno ya no existe en la configuración actual';if(!turn.active)return `El turno ${turn.name} está desactivado en la configuración actual`;if(!turn.days.includes(day))return `El turno ${turn.name} ya no está habilitado los ${days[day].toLowerCase()}s`;if(!resource)return 'Este punto ya no existe en la configuración actual';if(!resource.active)return `El punto ${resource.name} está desactivado en la configuración actual`;return ''};
 const unavailableAssignmentsForProgram=program=>program.assignments.filter(assignment=>unavailableReasonForAssignment(assignment));
 const assignmentCountLabel=count=>count===1?'asignación':'asignaciones';
@@ -347,3 +349,340 @@ shell=function(html){addProgramAvailabilityIndicators(html);document.querySelect
 function render(){if(view==='program'){const p=db.programs[0];return p?openProgram(p.id):newProgram()}({dashboard,participants,types,states,availability,turns,resources,programs,history}[view]||dashboard)()}render();
 document.addEventListener('click',event=>{if(event.target.closest('[data-action="openProgram"]'))programScope='all'},true);
 document.addEventListener('submit',event=>{if(event.target.id==='monthForm')programScope='all'},true);
+
+// Salidas de predicación conserva su propio modelo y reutiliza únicamente los
+// participantes y la comprobación de coincidencias con Predicación pública.
+const outreachModule=createOutreachModule({
+  getDb:()=>db,uid,now,esc,formatMonth,normalizeText,shell,modal,confirmDialog,
+  noticeDialog,formError,exportPdf:exportOutreachPdf,save,setView:next=>{view=next},render:()=>render(),days
+});
+outreachModule.ensureData();
+
+// Preparación no destructiva para el calendario de salidas. La interfaz actual
+// sigue leyendo sus campos históricos mientras los nuevos campos se añaden de
+// forma compatible; así cada etapa puede verificarse y revertirse aisladamente.
+function prepareOutreachCalendarData(){
+  db.outreach??={};
+  db.outreach.places??=[];
+  db.outreach.rules??=[];
+  db.outreach.programs??=[];
+  db.outreach.programs.forEach(program=>{
+    program.assignments??=[];
+    program.assignments.forEach(assignment=>{
+      assignment.manual??=assignment.origin==='manual'||assignment.protected===true;
+      assignment.inactive??=false;
+      assignment.inactiveReason??='';
+      if(!assignment.scheduleId){
+        const date=new Date(`${assignment.date}T12:00:00`);
+        const rule=db.outreach.rules.find(item=>item.active&&item.weekday===date.getDay()&&item.time===assignment.time);
+        assignment.scheduleId=rule?.id||'';
+      }
+    });
+    program.calendarVersion=2;
+  });
+}
+prepareOutreachCalendarData();
+
+const publicAvailabilityForAssignment=availableForAssignment;
+const publicAssignmentWarning=assignmentWarningReason;
+const publicAssignmentWarnings=warningReasonsForAssignment;
+availableForAssignment=(participantId,assignment,program)=>publicAvailabilityForAssignment(participantId,assignment,program)&&!outreachModule.conflictsForPublicAssignment(participantId,assignment).length;
+assignmentWarningReason=(person,assignment,program)=>publicAssignmentWarning(person,assignment,program)||outreachModule.conflictsForPublicAssignment(person?.id,assignment)[0]?.message||'';
+warningReasonsForAssignment=(program,assignment)=>{
+  const publicReasons=publicAssignmentWarnings(program,assignment);
+  const outreachReasons=(assignment.participantIds||[]).flatMap(participantId=>{
+    const person=db.participants.find(item=>item.id===participantId);
+    return outreachModule.conflictsForPublicAssignment(participantId,assignment).map(conflict=>`${person?.name||'Participante'}: ${conflict.message}`);
+  });
+  return [...new Set([...publicReasons,...outreachReasons])];
+};
+
+dashboard=function(){shell(`<section class="card"><div class="toolbar"><div><h2>Inicio</h2><p class="muted">Consulta el estado general de los programas. Cada módulo crea y administra sus propios programas.</p></div></div></section><section class="grid"><div class="card"><div class="stat">${db.participants.filter(person=>person.active).length}</div>Participantes activos</div><div class="card"><div class="stat">${db.turns.filter(turn=>turn.active).length}</div>Turnos públicos activos</div><div class="card"><div class="stat">${db.resources.filter(resource=>resource.active).length}</div>Puntos públicos activos</div><div class="card"><div class="stat">${db.programs.length}</div>Programas públicos</div></section>`)};
+
+const originalRender=render;
+render=function(){
+  outreachModule.ensureData();
+  if(outreachModule.isView(view))return outreachModule.render(view);
+  return originalRender();
+};
+
+const navGroups=[
+  {toggle:'#publicToggle',menu:'#publicMenu',views:['programs','resources','turns']},
+  {toggle:'#outreachToggle',menu:'#outreachMenu',views:['outreachPrograms','outreachPlaces','outreachRules','outreachProgram']},
+  {toggle:'#configToggle',menu:'#configMenu',views:['types','states']}
+];
+function setNavGroup(group,open){
+  const menu=document.querySelector(group.menu),toggle=document.querySelector(group.toggle);
+  if(!menu||!toggle)return;
+  menu.hidden=!open;
+  toggle.setAttribute('aria-expanded',String(open));
+  const icon=toggle.querySelector('b');
+  if(icon)icon.textContent=open?'⌄':'›';
+}
+function setNavigation(nextView){
+  view=nextView;
+  document.querySelectorAll('#nav button[data-view]').forEach(button=>button.classList.toggle('active',button.dataset.view===nextView));
+  navGroups.forEach(group=>{if(group.views.includes(nextView))setNavGroup(group,true)});
+  render();
+}
+navGroups.forEach(group=>{
+  const toggle=document.querySelector(group.toggle);
+  if(toggle)toggle.onclick=()=>{
+    const menu=document.querySelector(group.menu);
+    setNavGroup(group,menu?.hidden);
+  };
+});
+document.querySelectorAll('#nav button[data-view]').forEach(button=>button.onclick=()=>setNavigation(button.dataset.view));
+let outreachCalendarScope='all';
+function outreachSlots(program){
+  const [year,month]=program.month.split('-').map(Number),last=new Date(year,month,0,12).getDate(),slots=[];
+  for(let day=1;day<=last;day++){const d=new Date(year,month-1,day,12),date=`${year}-${String(month).padStart(2,'0')}-${String(day).padStart(2,'0')}`;db.outreach.rules.filter(rule=>rule.active&&rule.weekday===d.getDay()).forEach(rule=>slots.push({date,time:rule.time,scheduleId:rule.id}));}
+  return slots.sort((a,b)=>a.date.localeCompare(b.date)||a.time.localeCompare(b.time));
+}
+function outreachChanges(program){
+  const current=new Map((program.assignments||[]).map(item=>[`${item.date}|${item.scheduleId||item.time}`,item]));
+  const desired=outreachSlots(program),keys=new Set(desired.map(item=>`${item.date}|${item.scheduleId}`));
+  return desired.filter(slot=>{const item=current.get(`${slot.date}|${slot.scheduleId}`);return !item||item.time!==slot.time;}).length+[...current.keys()].filter(key=>!keys.has(key)).length;
+}
+function regenerateOutreachProgram(program,keep){
+  const prior=new Map((program.assignments||[]).filter(item=>item.manual).map(item=>[`${item.date}|${item.scheduleId||item.time}`,item]));
+  program.assignments=outreachSlots(program).map(slot=>{const previous=prior.get(`${slot.date}|${slot.scheduleId}`);if(keep&&previous)return {...previous,...slot};return {id:uid(),...slot,placeId:'',captainId:'',inactive:false,inactiveReason:'',manual:false,origin:'automática'};});
+  program.calendarSettingsSignature=outreachCalendarSettingsSignature();program.updatedAt=now();
+}
+function outreachAssignmentStatus(program,assignment){
+  if(assignment.inactive===true)return {kind:'inactive',reasons:[]};
+  const reasons=[],unavailable=[];
+  if(!assignment.placeId)reasons.push('Sin lugar de encuentro.');
+  if(!assignment.captainId)reasons.push('Sin capitán.');
+  const date=new Date(`${assignment.date}T12:00:00`),weekday=date.getDay();
+  const rule=assignment.scheduleId?db.outreach.rules.find(item=>item.id===assignment.scheduleId):db.outreach.rules.find(item=>item.active&&item.weekday===weekday&&item.time===assignment.time);
+  if(!rule)unavailable.push('El horario asociado ya no existe.');
+  else if(!rule.active)unavailable.push('El horario asociado está inactivo.');
+  else {
+    if(rule.weekday!==weekday)unavailable.push('El horario asociado ya no corresponde a este día.');
+    if(rule.time!==assignment.time)unavailable.push(`El horario cambió a ${rule.time}.`);
+  }
+  if(assignment.placeId){
+    const place=db.outreach.places.find(item=>item.id===assignment.placeId);
+    if(!place)unavailable.push('El lugar de encuentro ya no existe.');
+    else if(!place.active)unavailable.push('El lugar de encuentro está inactivo.');
+  }
+  if(assignment.captainId){
+    const captain=db.participants.find(item=>item.id===assignment.captainId);
+    if(!captain)unavailable.push('El capitán ya no existe.');
+    else if(!captain.active)unavailable.push('El capitán está inactivo.');
+    const conflicts=outreachModule.conflictsForAppointment(assignment.captainId,assignment,{programId:program.id,assignmentId:assignment.id});
+    unavailable.push(...conflicts.map(item=>item.message));
+  }
+  reasons.push(...unavailable);
+  return {kind:unavailable.length?'unavailable':reasons.length?'attention':'complete',reasons};
+}
+function outreachTimeLabel(assignment){
+  const date=new Date(`${assignment.date}T12:00:00`),rule=assignment.scheduleId
+    ? db.outreach.rules.find(item=>item.id===assignment.scheduleId)
+    : db.outreach.rules.find(item=>item.active&&item.weekday===date.getDay()&&item.time===assignment.time);
+  return rule?.name?`${rule.name} - ${assignment.time}`:assignment.time;
+}
+function outreachProgramSummary(program){
+  const items=(program.assignments||[]).map(assignment=>({assignment,status:outreachAssignmentStatus(program,assignment)}));
+  return {
+    items,
+    total:items.length,
+    complete:items.filter(item=>item.status.kind==='complete'),
+    attention:items.filter(item=>item.status.kind==='attention'||item.status.kind==='unavailable'),
+    inactive:items.filter(item=>item.status.kind==='inactive')
+  };
+}
+function renderOutreachCalendarV3(programId){
+  const program=db.outreach.programs.find(item=>item.id===programId);if(!program)return;
+  const summaryData=outreachProgramSummary(program),all=[...summaryData.items].sort((left,right)=>left.assignment.date.localeCompare(right.assignment.date)||left.assignment.time.localeCompare(right.assignment.time));
+  const selected=outreachCalendarScope==='complete'?summaryData.complete:outreachCalendarScope==='attention'?summaryData.attention:outreachCalendarScope==='inactive'?summaryData.inactive:all;
+  const byDate=selected.reduce((map,item)=>{(map[item.assignment.date]||=[]).push(item);return map;},{}),[year,month]=program.month.split('-').map(Number),first=new Date(year,month-1,1,12),end=new Date(year,month,0,12),start=new Date(first);start.setDate(first.getDate()-((first.getDay()+6)%7));
+  const places=new Map(db.outreach.places.map(item=>[item.id,item])),people=new Map(db.participants.map(item=>[item.id,item])),iso=value=>`${value.getFullYear()}-${String(value.getMonth()+1).padStart(2,'0')}-${String(value.getDate()).padStart(2,'0')}`;
+  const event=item=>{const assignment=item.assignment,status=item.status,place=places.get(assignment.placeId),person=people.get(assignment.captainId),title=status.reasons.join(' '),details=status.kind==='inactive'?`<small class="outreach-event-inactive-reason">${esc(assignment.inactiveReason||'Sin actividad')}</small>`:`<b class="outreach-event-captain"><span class="outreach-captain-icon" aria-hidden="true">🧑‍💼</span>${esc(person?.name||'Sin capitán')}</b><small class="outreach-event-place"><span class="outreach-place-icon" aria-hidden="true">🏠</span>${esc(place?.name||'Sin lugar de encuentro')}</small>`;return `<button type="button" class="outreach-calendar-event is-${status.kind}" title="${esc(title)}" data-calendar-action="edit" data-id="${assignment.id}"><span>${esc(outreachTimeLabel(assignment))}</span>${details}</button>`;};
+  const cells=Array.from({length:42},(_,index)=>{const date=new Date(start);date.setDate(start.getDate()+index);const value=iso(date),outside=date<first||date>end;return `<section class="outreach-calendar-day ${outside?'outside-month':''}"><header>${date.getDate()}</header>${(byDate[value]||[]).map(event).join('')}</section>`;}).join('');
+  const state=outreachCalendarState(program),changes=outreachChanges(program),summary=(id,label,count,kind,description)=>`<button type="button" class="program-summary-card summary-${kind} ${outreachCalendarScope===id?'active':''}" data-calendar-action="scope" data-id="${id}"><span>${label}</span><strong>${count}</strong>${description?`<small>${description}</small>`:''}</button>`;
+  document.querySelector('#app').innerHTML=`<section class="program-head card"><div class="toolbar"><div><span class="eyebrow">Salidas de predicación</span><h2>Programa ${esc(formatMonth(program.month))}</h2><span class="outreach-review-tag ${state}">${state==='reviewed'?'Revisado':'En edición'}</span></div><div class="toolbar program-tools">${changes?`<button type="button" class="update-program-button" data-calendar-action="update" data-id="${program.id}">Actualizar programa (${changes})</button>`:''}<button type="button" data-calendar-action="review" data-id="${program.id}" ${state==='reviewed'?'disabled':''}>${state==='reviewed'?'Revisado ✓':'Marcar como revisado'}</button><button type="button" data-outreach-action="exportPdf" data-id="${program.id}">Imprimir / PDF</button></div></div></section><section class="program-summary" aria-label="Resumen y filtros del programa">${summary('all','Total',summaryData.total,'total','salidas programadas en el mes')}${summary('complete','Completas',summaryData.complete.length,'complete','sin incidencias')}${summary('attention','Pendientes',summaryData.attention.length,'pending','requieren atención')}${summary('inactive','Sin actividad',summaryData.inactive.length,'inactive','')}</section><section class="card outreach-calendar-card"><div class="outreach-viewbar"><div><h3>Calendario mensual</h3><p class="muted small">Selecciona una salida para editar hora, estado, lugar de encuentro o capitán.</p></div></div><div class="outreach-calendar"><div class="outreach-calendar-context"><strong>${esc(formatMonth(program.month))}</strong><div class="outreach-calendar-weekdays"><span>Lun</span><span>Mar</span><span>Mié</span><span>Jue</span><span>Vie</span><span>Sáb</span><span>Dom</span></div></div><div class="outreach-calendar-grid">${cells}</div></div></section>`;
+}
+function renderOutreachCalendarV2(programId){
+  const program=db.outreach.programs.find(item=>item.id===programId);if(!program)return;
+  const all=[...(program.assignments||[])].sort((a,b)=>a.date.localeCompare(b.date)||a.time.localeCompare(b.time));
+  const missingCaptain=all.filter(item=>!item.inactive&&!item.captainId),missingPlace=all.filter(item=>!item.inactive&&!item.placeId),inactive=all.filter(item=>item.inactive);
+  const filtered=outreachCalendarScope==='captain'?missingCaptain:outreachCalendarScope==='place'?missingPlace:outreachCalendarScope==='inactive'?inactive:all;
+  const byDate=filtered.reduce((map,item)=>{(map[item.date]||=[]).push(item);return map;},{}),[year,month]=program.month.split('-').map(Number),first=new Date(year,month-1,1,12),end=new Date(year,month,0,12),start=new Date(first);start.setDate(first.getDate()-((first.getDay()+6)%7));
+  const places=new Map(db.outreach.places.map(item=>[item.id,item])),people=new Map(db.participants.map(item=>[item.id,item])),iso=d=>`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+  const event=item=>{const off=item.inactive,place=places.get(item.placeId),person=people.get(item.captainId),details=off?`<small class="outreach-event-inactive-reason">${esc(item.inactiveReason||'Sin actividad')}</small>`:`<b class="outreach-event-captain"><span class="outreach-captain-icon" aria-hidden="true">🧑‍💼</span>${esc(person?.name||'Sin capitán')}</b><small class="outreach-event-place"><span class="outreach-place-icon" aria-hidden="true">🏠</span>${esc(place?.name||'Sin lugar de encuentro')}</small>`;return `<button type="button" class="outreach-calendar-event ${off?'is-inactive':(!place||!person)?'is-unassigned':'is-assigned'}" data-calendar-action="edit" data-id="${item.id}"><span>${esc(outreachTimeLabel(item))}</span>${details}</button>`;};
+  const cells=Array.from({length:42},(_,i)=>{const d=new Date(start);d.setDate(start.getDate()+i);const date=iso(d),outside=d<first||d>end;return `<section class="outreach-calendar-day ${outside?'outside-month':''}"><header>${d.getDate()}</header>${(byDate[date]||[]).map(event).join('')}</section>`;}).join('');
+  const state=outreachCalendarState(program),changes=outreachChanges(program),summary=(id,label,count,warning)=>`<button type="button" class="program-summary-card ${outreachCalendarScope===id?'active':''} ${warning&&count?'is-pending':''}" data-calendar-action="scope" data-id="${id}"><span>${label}</span><strong>${count}</strong></button>`;
+  document.querySelector('#app').innerHTML=`<section class="program-head card"><div class="toolbar"><div><span class="eyebrow">Salidas de predicación</span><h2>Programa ${esc(formatMonth(program.month))}</h2><span class="outreach-review-tag ${state}">${state==='reviewed'?'Revisado':'En edición'}</span></div><div class="toolbar program-tools">${changes?`<button type="button" class="update-program-button" data-calendar-action="update" data-id="${program.id}">Actualizar programa (${changes})</button>`:''}<button type="button" data-calendar-action="review" data-id="${program.id}" ${state==='reviewed'?'disabled':''}>${state==='reviewed'?'Revisado ✓':'Marcar como revisado'}</button><button type="button" data-outreach-action="exportPdf" data-id="${program.id}">Imprimir / PDF</button></div></div></section><section class="program-summary">${summary('all','Salidas',all.length,false)}${summary('captain','Sin capitán',missingCaptain.length,true)}${summary('place','Sin lugar de encuentro',missingPlace.length,true)}${summary('inactive','Sin actividad',inactive.length,true)}</section><section class="card outreach-calendar-card"><div class="outreach-viewbar"><div><h3>Calendario mensual</h3><p class="muted small">Selecciona una salida para editar hora, estado, lugar de encuentro o capitán.</p></div></div><div class="outreach-calendar"><div class="outreach-calendar-weekdays"><span>Lun</span><span>Mar</span><span>Mié</span><span>Jue</span><span>Vie</span><span>Sáb</span><span>Dom</span></div><div class="outreach-calendar-grid">${cells}</div></div></section>`;
+}
+function decorateOutreachProgramList(){
+  document.querySelectorAll('#app table th').forEach(cell=>{if(cell.textContent.trim()==='Citas')cell.textContent='Salidas';});
+  document.querySelectorAll('#app [data-outreach-action="openProgram"]').forEach(button=>{const program=db.outreach.programs.find(item=>item.id===button.dataset.id);if(!program)return;const row=button.closest('tr'),status=row?.cells[1];if(status)status.textContent=outreachCalendarState(program)==='reviewed'?'Revisado':'En edición';if(button.closest('td')!==row?.cells[0])return;const summary=outreachProgramSummary(program);if(!summary.attention.length||button.parentElement.querySelector('.outreach-pending-indicator'))return;const missingCaptain=summary.attention.filter(item=>!item.assignment.captainId).length,missingPlace=summary.attention.filter(item=>!item.assignment.placeId).length,unavailable=summary.attention.filter(item=>item.status.kind==='unavailable').length,details=[];if(missingCaptain)details.push(`${missingCaptain} sin capitán`);if(missingPlace)details.push(`${missingPlace} sin lugar de encuentro`);if(unavailable)details.push(`${unavailable} no disponibles`);const badge=document.createElement('span');badge.className='outreach-pending-indicator';badge.textContent='⚠ Pendientes';badge.title=details.join(' · ');button.insertAdjacentElement('afterend',badge);});
+}
+
+document.addEventListener('click',event=>{
+  const button=event.target.closest('[data-outreach-action]');
+  if(!button)return;
+  event.preventDefault();
+  event.stopImmediatePropagation();
+  outreachModule.handleAction(button.dataset.outreachAction,button.dataset.id);
+},true);
+
+const handleOutreachActionBeforeCalendar=outreachModule.handleAction;
+outreachModule.handleAction=function(action,id){
+  if(action!=='newProgram')return handleOutreachActionBeforeCalendar(action,id);
+  const month=new Date().toISOString().slice(0,7);
+  modal(`<div class="toolbar"><h2>Crear programa</h2><button type="button" class="icon-button" data-close aria-label="Cerrar">×</button></div><div class="form"><label>Mes<input name="month" type="month" value="${month}" required></label></div><p class="muted small">Se crearán todas las salidas de los horarios activos, sin lugar de encuentro ni capitán.</p><div class="modal-actions"><button type="button" data-close>Cancelar</button><button class="primary">Crear programa</button></div>`,(form,dialog)=>{const value=form.get('month');if(db.outreach.programs.some(item=>item.month===value))return formError('Ya existe un programa para ese mes.');const program={id:uid(),month:value,createdAt:now(),updatedAt:now(),assignments:[]};regenerateOutreachProgram(program,false);db.outreach.programs.unshift(program);save('Creación de programa de salidas',formatMonth(value));dialog.close();outreachCalendarScope='all';setNavigation('outreachProgram');});
+};
+render();
+
+const renderOutreachBeforeCalendarUi=outreachModule.render;
+outreachModule.render=function(nextView){
+  renderOutreachBeforeCalendarUi(nextView);
+  if(nextView==='outreachProgram'){
+    const programId=document.querySelector('#app [data-outreach-action="exportPdf"]')?.dataset.id;
+    if(programId){
+      renderOutreachCalendarV3(programId);
+      const inactiveCard=document.querySelector('.program-summary [data-id="inactive"] span');
+      if(inactiveCard)inactiveCard.textContent='Sin Actividad / Otros';
+    }
+    return;
+  }
+  if(nextView==='outreachPrograms')decorateOutreachProgramList();
+};
+
+function outreachCalendarState(program){
+  const assignments=(program.assignments||[]).map(item=>({
+    ...item,
+    inactive:item.inactive===true,
+    inactiveReason:item.inactiveReason||''
+  }));
+  const signature=JSON.stringify(assignments.map(item=>[
+    item.id,item.date,item.time,item.placeId||'',item.captainId||'',item.inactive,item.inactiveReason
+  ]).sort());
+  const hasAttention=outreachProgramSummary(program).attention.length>0;
+  return program.reviewedSignature===signature&&outreachChanges(program)===0&&!hasAttention?'reviewed':'editing';
+}
+
+function outreachCalendarSettingsSignature(){
+  const rules=db.outreach.rules.filter(item=>item.active).map(item=>[item.id,item.weekday,item.time]).sort();
+  return JSON.stringify({rules});
+}
+
+function regenerateOutreachCalendar(program,keepManual){
+  const [year,month]=program.month.split('-').map(Number);
+  const last=new Date(year,month,0,12).getDate();
+  const rules=db.outreach.rules.filter(item=>item.active);
+  const places=db.outreach.places.filter(item=>item.active&&item.rotationEnabled).sort((left,right)=>left.rotationOrder-right.rotationOrder);
+  const prior=new Map((program.assignments||[]).filter(item=>item.manual).map(item=>[`${item.date}|${item.time}`,item]));
+  const generated=[];
+  let index=0;
+  for(let day=1;day<=last;day++){
+    const value=new Date(year,month-1,day,12);
+    const date=`${year}-${String(month).padStart(2,'0')}-${String(day).padStart(2,'0')}`;
+    rules.filter(rule=>rule.weekday===value.getDay()).sort((left,right)=>left.time.localeCompare(right.time)).forEach(rule=>{
+      const key=`${date}|${rule.time}`;
+      if(keepManual&&prior.has(key)){generated.push(prior.get(key));return;}
+      generated.push({id:uid(),date,time:rule.time,placeId:places.length?places[index%places.length].id:'',captainId:'',inactive:false,inactiveReason:'',manual:false,origin:'automática'});
+      index++;
+    });
+  }
+  program.assignments=generated;
+  program.calendarSettingsSignature=outreachCalendarSettingsSignature();
+  program.updatedAt=now();
+}
+
+function attachOutreachRegeneration(programId){
+  const program=db.outreach.programs.find(item=>item.id===programId);
+  if(!program||program.calendarSettingsSignature===outreachCalendarSettingsSignature())return;
+  const toolbar=document.querySelector('#app .program-head .toolbar:last-child');
+  if(!toolbar)return;
+  const button=document.createElement('button');
+  button.className='primary';button.textContent='Regenerar calendario';
+  button.onclick=()=>modal(`<div class="toolbar"><h2>Regenerar calendario</h2><button type="button" class="icon-button" data-close aria-label="Cerrar">×</button></div><p class="muted">Hay cambios en horarios o lugares de encuentro.</p><div class="regeneration-options"><label><input type="radio" name="mode" value="keep" checked> <strong>Regenerar y mantener cambios</strong><small>Conserva las salidas editadas manualmente.</small></label><label><input type="radio" name="mode" value="all"> <strong>Regenerar todo</strong><small>Reemplaza todas las salidas con la rotación actual.</small></label></div><div class="modal-actions"><button type="button" data-close>Cancelar</button><button class="primary">Regenerar calendario</button></div>`,(form,dialog)=>{regenerateOutreachCalendar(program,form.get('mode')==='keep');save('Regeneración de calendario',formatMonth(program.month));dialog.close();render();});
+  toolbar.insertBefore(button,toolbar.lastElementChild);
+  const notice=document.createElement('p');notice.className='outreach-regeneration-notice';notice.textContent='Hay cambios en horarios o lugares. Regenera el calendario para aplicarlos.';
+  document.querySelector('#app .program-head').append(notice);
+}
+
+function renderOutreachCalendar(programId){
+  const program=db.outreach.programs.find(item=>item.id===programId);
+  if(!program)return;
+  const assignments=[...(program.assignments||[])].sort((left,right)=>left.date.localeCompare(right.date)||left.time.localeCompare(right.time));
+  const byDate=assignments.reduce((result,item)=>{(result[item.date]||=[]).push(item);return result;},{});
+  const [year,month]=program.month.split('-').map(Number);
+  const first=new Date(year,month-1,1,12);
+  const start=new Date(first);
+  start.setDate(first.getDate()-((first.getDay()+6)%7));
+  const end=new Date(year,month,0,12);
+  const placeById=new Map(db.outreach.places.map(item=>[item.id,item]));
+  const personById=new Map(db.participants.map(item=>[item.id,item]));
+  const iso=value=>`${value.getFullYear()}-${String(value.getMonth()+1).padStart(2,'0')}-${String(value.getDate()).padStart(2,'0')}`;
+  const formatDay=value=>new Date(`${value}T12:00:00`).getDate();
+  const eventMarkup=item=>{
+    const place=placeById.get(item.placeId);
+    const person=personById.get(item.captainId);
+    const inactive=item.inactive===true;
+    const details=inactive?`<small class="outreach-event-inactive-reason">${esc(item.inactiveReason||'Sin actividad')}</small>`:`<b class="outreach-event-captain"><span class="outreach-captain-icon" aria-hidden="true">🧑‍💼</span>${esc(person?.name||'Sin capitán')}</b><small class="outreach-event-place"><span class="outreach-place-icon" aria-hidden="true">🏠</span>${esc(place?.name||'Sin lugar de encuentro')}</small>`;
+    return `<button type="button" class="outreach-calendar-event ${inactive?'is-inactive':person?'is-assigned':'is-unassigned'}" data-calendar-action="edit" data-id="${item.id}"><span>${esc(outreachTimeLabel(item))}</span>${details}</button>`;
+  };
+  const cells=Array.from({length:42},(_,index)=>{
+    const value=new Date(start);value.setDate(start.getDate()+index);
+    const valueIso=iso(value),outside=value<first||value>end;
+    return `<section class="outreach-calendar-day ${outside?'outside-month':''}"><header>${formatDay(valueIso)}</header>${(byDate[valueIso]||[]).map(eventMarkup).join('')}</section>`;
+  }).join('');
+  const unassigned=assignments.filter(item=>!item.inactive&&!item.captainId).length;
+  const inactive=assignments.filter(item=>item.inactive).length;
+  const state=outreachCalendarState(program);
+  document.querySelector('#app').innerHTML=`<section class="program-head card"><div class="toolbar"><div><span class="eyebrow">Salidas de predicación</span><h2>Programa ${esc(formatMonth(program.month))}</h2><span class="outreach-review-tag ${state}">${state==='reviewed'?'Revisado':'En edición'}</span></div><div class="toolbar"><button type="button" data-outreach-action="exportPdf" data-id="${program.id}">Imprimir / PDF</button><button type="button" data-calendar-action="review" data-id="${program.id}" ${state==='reviewed'?'disabled':''}>${state==='reviewed'?'Revisado ✓':'Marcar como revisado'}</button></div></div></section><section class="program-summary"><div class="program-summary-card"><span>Salidas</span><strong>${assignments.length}</strong></div><div class="program-summary-card"><span>Sin capitán</span><strong>${unassigned}</strong></div><div class="program-summary-card"><span>Sin actividad</span><strong>${inactive}</strong></div></section><section class="card outreach-calendar-card"><div class="outreach-viewbar"><div><h3>Calendario mensual</h3><p class="muted small">Selecciona una salida para editarla. La generación automática se incorporará en la siguiente capa.</p></div></div><div class="outreach-calendar"><div class="outreach-calendar-weekdays"><span>Lun</span><span>Mar</span><span>Mié</span><span>Jue</span><span>Vie</span><span>Sáb</span><span>Dom</span></div><div class="outreach-calendar-grid">${cells}</div></div></section>`;
+}
+
+function editOutreachCalendarAppointmentV2(program,appointment){
+  const places=db.outreach.places.filter(item=>item.active||item.id===appointment.placeId),role=db.types.find(item=>normalizeText(item.name)==='capitan'),captains=(role?db.participants.filter(item=>item.active&&(item.typeIds||[]).includes(role.id)):[]).sort((a,b)=>a.name.localeCompare(b.name,'es')),selected=db.participants.find(item=>item.id===appointment.captainId);
+  modal(`<div class="toolbar"><div><span class="eyebrow">${esc(appointment.date)} · ${esc(appointment.time)}</span><h2>Editar salida</h2></div><button type="button" class="icon-button" data-close aria-label="Cerrar">×</button></div><div class="form"><label>Hora<input name="time" type="time" value="${appointment.time}"></label><label>Estado<select name="inactive"><option value="false" ${!appointment.inactive?'selected':''}>Salida programada</option><option value="true" ${appointment.inactive&&appointment.inactiveType!=='other-plans'?'selected':''}>Sin actividad</option><option value="other-plans" ${appointment.inactiveType==='other-plans'?'selected':''}>Otros planes</option></select></label><label data-place-field><span class="outreach-form-label"><span class="outreach-form-emoji" aria-hidden="true">🏠</span>Lugar de encuentro</span><select name="placeId"><option value="">Sin lugar de encuentro</option>${places.map(item=>`<option value="${item.id}" ${item.id===appointment.placeId?'selected':''}>${esc(item.name)}</option>`).join('')}</select></label><label class="captain-autocomplete" data-captain-field><span class="outreach-form-label"><span class="outreach-form-emoji" aria-hidden="true">🧑‍💼</span>Capitán</span><input name="search" type="search" placeholder="Buscar capitán por nombre" value="${esc(selected?.name||'')}"><input type="hidden" name="captainId" value="${appointment.captainId||''}"><div class="captain-results" hidden></div></label><label class="wide" data-reason-field>Motivo<input name="reason" value="${esc(appointment.inactiveReason||'')}" placeholder="Ej. Asamblea o visita"></label></div><div class="modal-actions"><button type="button" data-close>Cancelar</button><button class="primary">Guardar salida</button></div>`,(form,dialog)=>{const inactiveState=form.get('inactive'),inactive=inactiveState!=='false',inactiveType=inactiveState==='other-plans'?'other-plans':'inactive',captainId=inactive?'':form.get('captainId');const reason=form.get('reason').trim()||(inactiveState==='other-plans'?'Otros planes':'Sin actividad');const conflicts=captainId?outreachModule.conflictsForAppointment(captainId,{...appointment,time:form.get('time'),captainId,inactive},{programId:program.id,assignmentId:appointment.id}):[];if(conflicts.length)return formError('El capitán no está disponible para esta salida.');Object.assign(appointment,{time:form.get('time'),placeId:inactive?'':form.get('placeId'),captainId,inactive,inactiveType:inactive?inactiveType:'',inactiveReason:inactive?reason:'',manual:true,origin:'manual'});program.updatedAt=now();save('Edición de salida',`${appointment.date} · ${appointment.time}`);dialog.close();render();});
+  let previouslyInactive=appointment.inactive===true;const root=document.querySelector('#modal'),status=root.querySelector('[name="inactive"]'),search=root.querySelector('[name="search"]'),hidden=root.querySelector('[name="captainId"]'),results=root.querySelector('.captain-results'),time=root.querySelector('[name="time"]'),sync=()=>{const off=status.value!=='false';root.querySelector('[data-place-field]').hidden=off;root.querySelector('[data-captain-field]').hidden=off;root.querySelector('[data-reason-field]').hidden=!off;if(!off&&previouslyInactive){root.querySelector('[name="placeId"]').value='';hidden.value='';search.value='';}previouslyInactive=off;results.hidden=true;},paint=()=>{const term=normalizeText(search.value);results.innerHTML=captains.filter(item=>normalizeText(item.name).includes(term)).map(item=>{const conflicts=outreachModule.conflictsForAppointment(item.id,{...appointment,time:time.value,captainId:item.id,inactive:false},{programId:program.id,assignmentId:appointment.id});return `<button type="button" class="${conflicts.length?'is-unavailable':''}" title="${esc(conflicts.map(x=>x.message).join(' · '))}" data-choice="${item.id}"><span>${esc(item.name)}</span><small class="captain-option-status${conflicts.length?' is-unavailable':''}">${conflicts.length?'No disponible':'Disponible'}</small></button>`;}).join('')||'<p class="captain-no-results">No hay coincidencias.</p>';results.hidden=false;results.querySelectorAll('[data-choice]').forEach(button=>button.onclick=()=>{if(button.classList.contains('is-unavailable'))return;const person=captains.find(item=>item.id===button.dataset.choice);hidden.value=person.id;search.value=person.name;results.hidden=true;});};search.onfocus=paint;search.oninput=()=>{hidden.value='';paint();};time.onchange=()=>{if(!results.hidden)paint();};status.onchange=sync;sync();
+}
+
+function editOutreachCalendarAppointment(program,appointment){
+  const places=db.outreach.places.filter(item=>item.active||item.id===appointment.placeId);
+  const captainRole=db.types.find(type=>normalizeText(type.name)==='capitan');
+  const captains=(captainRole?db.participants.filter(person=>person.active&&(person.typeIds||[]).includes(captainRole.id)):[]).sort((left,right)=>left.name.localeCompare(right.name,'es'));
+  const selected=db.participants.find(person=>person.id===appointment.captainId);
+  modal(`<div class="toolbar"><div><span class="eyebrow">${esc(new Date(`${appointment.date}T12:00:00`).toLocaleDateString('es-MX',{weekday:'long',day:'numeric',month:'long'}))} · ${esc(appointment.time)}</span><h2>Editar salida</h2></div><button type="button" class="icon-button" data-close aria-label="Cerrar">×</button></div><div class="form"><label>Hora<input name="time" type="time" value="${esc(appointment.time)}"></label><label>Estado<select name="inactive"><option value="false" ${!appointment.inactive?'selected':''}>Salida programada</option><option value="true" ${appointment.inactive&&appointment.inactiveType!=='other-plans'?'selected':''}>Sin actividad</option><option value="other-plans" ${appointment.inactiveType==='other-plans'?'selected':''}>Otros planes</option></select></label><label class="wide" data-calendar-reason>Motivo<input name="reason" value="${esc(appointment.inactiveReason||'')}" placeholder="Ej. Asamblea o visita"></label><label data-calendar-place>Lugar<select name="placeId"><option value="">Sin lugar de encuentro</option>${places.map(place=>`<option value="${place.id}" ${place.id===appointment.placeId?'selected':''}>${esc(place.name)}</option>`).join('')}</select></label><label class="captain-autocomplete" data-calendar-captain>Capitán<input name="captainSearch" type="search" placeholder="Buscar capitán por nombre" value="${esc(selected?.name||'')}"><input name="captainId" type="hidden" value="${esc(appointment.captainId||'')}"><div class="captain-results" hidden></div></label></div><div class="modal-actions"><button type="button" data-close>Cancelar</button><button class="primary">Guardar salida</button></div>`,(form,dialog)=>{
+    const inactiveState=form.get('inactive');
+    const inactive=inactiveState!=='false';
+    const inactiveType=inactiveState==='other-plans'?'other-plans':'inactive';
+    const captainId=inactive?'':form.get('captainId');
+    const reason=form.get('reason').trim()||(inactiveState==='other-plans'?'Otros planes':'Sin actividad');
+    const draft={...appointment,time:form.get('time'),captainId,inactive};
+    const conflicts=captainId?outreachModule.conflictsForAppointment(captainId,draft,{programId:program.id,assignmentId:appointment.id}):[];
+    if(conflicts.length)return formError('El capitán no está disponible para esta salida.');
+    Object.assign(appointment,{time:draft.time,placeId:inactive?'':form.get('placeId'),captainId,inactive,inactiveType:inactive?inactiveType:'',inactiveReason:inactive?reason:'',manual:true,origin:'manual',protected:true});
+    program.updatedAt=now();
+    save('Edición de salida',`${appointment.date} · ${appointment.time}`);
+    dialog.close();render();
+  });
+  const root=document.querySelector('#modal'),inactive=root.querySelector('[name="inactive"]'),search=root.querySelector('[name="captainSearch"]'),hidden=root.querySelector('[name="captainId"]'),results=root.querySelector('.captain-results'),time=root.querySelector('[name="time"]');
+  const sync=()=>{const off=inactive.value!=='false';root.querySelector('[data-calendar-reason]').hidden=!off;root.querySelector('[data-calendar-place]').hidden=off;root.querySelector('[data-calendar-captain]').hidden=off;results.hidden=true;};
+  const draw=()=>{const term=normalizeText(search.value);results.innerHTML=captains.filter(person=>normalizeText(person.name).includes(term)).map(person=>{const conflicts=outreachModule.conflictsForAppointment(person.id,{...appointment,time:time.value,captainId:person.id,inactive:false},{programId:program.id,assignmentId:appointment.id});const reason=conflicts.map(conflict=>conflict.message).join(' · ');return `<button type="button" class="${conflicts.length?'is-unavailable':''}" data-captain-choice="${person.id}" title="${esc(reason)}"><span>${esc(person.name)}</span><small class="captain-option-status${conflicts.length?' is-unavailable':''}">${conflicts.length?'No disponible':'Disponible'}</small></button>`;}).join('')||'<p class="captain-no-results">No hay coincidencias.</p>';results.hidden=false;results.querySelectorAll('[data-captain-choice]').forEach(button=>button.onclick=()=>{if(button.classList.contains('is-unavailable'))return;const person=captains.find(item=>item.id===button.dataset.captainChoice);hidden.value=person.id;search.value=person.name;results.hidden=true;});};
+  search.onfocus=draw;search.oninput=()=>{hidden.value='';draw();};time.onchange=()=>{if(!results.hidden)draw();};inactive.onchange=sync;sync();
+}
+
+document.addEventListener('click',event=>{
+  const button=event.target.closest('[data-calendar-action]');
+  if(!button)return;
+  const activeProgramId=document.querySelector('#app [data-outreach-action="exportPdf"]')?.dataset.id;
+  const program=db.outreach.programs.find(item=>item.id===button.dataset.id)||db.outreach.programs.find(item=>item.id===activeProgramId)||db.outreach.programs.find(item=>(item.assignments||[]).some(assignment=>assignment.id===button.dataset.id));
+  if(!program)return;
+  if(button.dataset.calendarAction==='scope'){outreachCalendarScope=button.dataset.id;return render();}
+  if(button.dataset.calendarAction==='update')return modal(`<div class="toolbar"><h2>Actualizar programa</h2><button type="button" class="icon-button" data-close aria-label="Cerrar">×</button></div><p class="muted">Aplica los cambios de horarios al calendario.</p><div class="regeneration-options"><label><input type="radio" name="mode" value="keep" checked> <strong>Actualizar y conservar cambios</strong><small>Conserva las salidas editadas manualmente.</small></label><label><input type="radio" name="mode" value="all"> <strong>Actualizar todo</strong><small>Reemplaza todas las salidas con horarios vacíos.</small></label></div><div class="modal-actions"><button type="button" data-close>Cancelar</button><button class="primary">Actualizar programa</button></div>`,(form,dialog)=>{regenerateOutreachProgram(program,form.get('mode')==='keep');save('Actualización de programa de salidas',formatMonth(program.month));dialog.close();outreachCalendarScope='all';render();});
+  if(button.dataset.calendarAction==='edit')return editOutreachCalendarAppointmentV2(program,program.assignments.find(item=>item.id===button.dataset.id));
+  if(button.dataset.calendarAction==='review'){
+    const assignments=program.assignments||[];
+    program.reviewedAt=now();
+    program.reviewedSignature=JSON.stringify(assignments.map(item=>[item.id,item.date,item.time,item.placeId||'',item.captainId||'',item.inactive===true,item.inactiveReason||'']).sort());
+    save('Programa de salidas revisado',formatMonth(program.month));
+    render();
+  }
+},true);

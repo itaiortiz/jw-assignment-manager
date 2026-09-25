@@ -240,3 +240,20 @@ html[data-theme="dark"] .program-tools button:disabled,html[data-theme="dark"] .
 /* Asignaciones heredadas de una configuración que ya no está disponible. */
 .program-config-note{margin:10px 0 0;color:#925c00;font-size:.9rem;font-weight:650}.program-config-note.is-new{color:#07588f}.update-program-button{order:-1;border-color:#d5a13b!important;background:#fff7df!important;color:#875500!important}.update-program-button:hover{border-color:#b88318!important;background:#ffedbd!important;color:#704600!important}.slot-unavailable{background:#fffaf0!important;border-left-color:#d5a13b!important}.slot-unavailable .slot-status,.slot-status.unavailable{background:#fff1cc!important;color:#875500!important}.program-availability-indicator{display:inline-flex;align-items:center;margin:0 0 0 7px;padding:3px 7px;border:1px solid #e1b45a;border-radius:999px;background:#fff7df;color:#875500;font-size:.76rem;font-weight:700;line-height:1.25;vertical-align:middle}.program-availability-indicator:hover{background:#ffedbd;color:#704600;border-color:#b88318}.program-availability-indicator.is-new{border-color:#78add0;background:#eaf6fc;color:#07588f}.program-availability-indicator.is-new:hover{background:#d8effb;color:#06466f;border-color:#4d95c0}
 html[data-theme="dark"] .program-config-note{color:#f0bf61}html[data-theme="dark"] .program-config-note.is-new{color:#8fd0f8}html[data-theme="dark"] .update-program-button{background:#4d3714!important;color:#ffda8b!important;border-color:#a97724!important}html[data-theme="dark"] .update-program-button:hover{background:#604719!important;color:#ffe4a6!important;border-color:#d6a54b!important}html[data-theme="dark"] .slot-unavailable{background:#4d3714!important;border-left-color:#a97724!important}html[data-theme="dark"] .slot-unavailable .slot-status,html[data-theme="dark"] .slot-status.unavailable{background:#4d3714!important;color:#ffda8b!important}html[data-theme="dark"] .program-availability-indicator{background:#4d3714;color:#ffda8b;border-color:#a97724}html[data-theme="dark"] .program-availability-indicator:hover{background:#604719;color:#ffe4a6;border-color:#d6a54b}html[data-theme="dark"] .program-availability-indicator.is-new{background:#1b4058;color:#8fd0f8;border-color:#4ca6df}html[data-theme="dark"] .program-availability-indicator.is-new:hover{background:#24536f;color:#b8e4fb;border-color:#77c3ee}
+
+/* Referencia semanal persistente al recorrer el calendario público. */
+.calendar-navigation{position:sticky;top:-26px;z-index:4;margin-bottom:0;background:#fff;box-shadow:none}
+.calendar-navigation .icon-button{display:grid;width:36px;min-width:36px;height:36px;place-items:center;padding:0;line-height:1;text-align:center}
+.week-calendar-header{top:10px}
+.calendar-scroll{overflow:visible}
+html[data-theme="dark"] .calendar-navigation{background:#172630;box-shadow:none}
+@media(max-width:950px){.calendar-navigation{position:relative;top:0}.week-calendar-header{position:relative;top:0}.calendar-scroll{overflow-x:auto;overflow-y:visible}}
+@media(max-width:760px){.calendar-navigation{position:relative}.week-calendar-header{position:relative}}
+
+/* Acentos de estado para las tarjetas públicas. Las no disponibles conservan su tratamiento propio. */
+.program-slot.slot-ready:not(.slot-unassigned):not(.slot-unavailable):not(.slot-warning){border-left-color:#48a56f!important}
+.program-slot.slot-pending:not(.slot-unassigned):not(.slot-unavailable){border-left-color:#e5a22a!important}
+.program-slot.slot-warning:not(.slot-unavailable){border-left-color:#c87573!important}
+html[data-theme="dark"] .program-slot.slot-ready:not(.slot-unassigned):not(.slot-unavailable):not(.slot-warning){border-left-color:#66c88d!important}
+html[data-theme="dark"] .program-slot.slot-pending:not(.slot-unassigned):not(.slot-unavailable){border-left-color:#d6a54b!important}
+html[data-theme="dark"] .program-slot.slot-warning:not(.slot-unavailable){border-left-color:#c87573!important}
