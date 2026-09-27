@@ -749,6 +749,177 @@ openProgram=function(id){
   }
 };
 
+// Filtros y balance de carga para Predicación pública. A diferencia de las
+// salidas, una asignación puede contener a varias personas; por eso la carga
+// se cuenta por participación individual (persona + turno + punto).
+let publicProgramParticipantIds=[];
+let publicProgramDistributionOpen=false;
+let publicProgramFilterController;
+
+function publicProgramViewport(){
+  const distributionList=document.querySelector('.public-distribution-list');
+  return {x:window.scrollX||0,y:window.scrollY||0,distributionTop:distributionList?.scrollTop||0};
+}
+
+function restorePublicProgramViewport(viewport){
+  if(!viewport)return;
+  requestAnimationFrame(()=>requestAnimationFrame(()=>{
+    window.scrollTo(viewport.x,viewport.y);
+    const distributionList=document.querySelector('.public-distribution-list');
+    if(distributionList)distributionList.scrollTop=viewport.distributionTop;
+  }));
+}
+
+function publicProgramParticipants(program){
+  const activeResourceIds=new Set(db.resources.filter(resource=>resource.active).map(resource=>resource.id));
+  const enabledIds=new Set((db.participantResources||[]).filter(link=>activeResourceIds.has(link.resourceId)).map(link=>link.participantId));
+  const assignedIds=new Set((program.assignments||[]).flatMap(assignment=>assignment.participantIds||[]));
+  return db.participants.filter(person=>person.active&&(enabledIds.has(person.id)||assignedIds.has(person.id))).sort((left,right)=>left.name.localeCompare(right.name,'es'));
+}
+
+function publicProgramFilteredAssignments(assignments){
+  if(!publicProgramParticipantIds.length)return assignments;
+  return assignments.filter(assignment=>(assignment.participantIds||[]).some(id=>publicProgramParticipantIds.includes(id)));
+}
+
+function publicProgramJumpToMatch(program){
+  if(programLayout!=='calendar'||!publicProgramParticipantIds.length)return;
+  const groups=classifyProgramAssignments(program);
+  const match=publicProgramFilteredAssignments(groups[programScope]||groups.all).sort((left,right)=>left.date.localeCompare(right.date)||String(left.turnId).localeCompare(String(right.turnId)))[0];
+  if(match)programCalendarWeekStart=calendarLocalIso(calendarMonday(calendarDate(match.date)));
+}
+
+const calendarProgramMarkupBeforeParticipantFilter=calendarProgramMarkup;
+calendarProgramMarkup=function(program,assignments,people){
+  return calendarProgramMarkupBeforeParticipantFilter(program,publicProgramFilteredAssignments(assignments),people);
+};
+
+const agendaProgramMarkupBeforeParticipantFilter=agendaProgramMarkup;
+agendaProgramMarkup=function(program,assignments,people){
+  return agendaProgramMarkupBeforeParticipantFilter(program,publicProgramFilteredAssignments(assignments),people);
+};
+
+function publicParticipantFilterMarkup(program,participants,visibleAssignments){
+  const peopleById=new Map(db.participants.map(person=>[person.id,person]));
+  const selectedPeople=publicProgramParticipantIds.map(id=>peopleById.get(id)).filter(Boolean);
+  const chips=selectedPeople.map(person=>`<span class="public-filter-chip">${esc(person.name)}<button type="button" aria-label="Quitar a ${esc(person.name)} del filtro" data-public-participant-remove="${person.id}">×</button></span>`).join('');
+  const participationCount=visibleAssignments.reduce((total,assignment)=>total+(assignment.participantIds||[]).filter(id=>publicProgramParticipantIds.includes(id)).length,0);
+  const weeks=new Set(visibleAssignments.map(assignment=>calendarLocalIso(calendarMonday(calendarDate(assignment.date))))).size;
+  const summary=publicProgramParticipantIds.length?`<p class="public-filter-summary" aria-live="polite">${participationCount} ${participationCount===1?'participación encontrada':'participaciones encontradas'}${weeks?` en ${weeks} ${weeks===1?'semana':'semanas'}`:''}.</p>`:'';
+  return `<div class="public-participant-filter" data-public-participant-filter><div class="public-participant-search"><input id="publicParticipantSearch" type="search" autocomplete="off" placeholder="Buscar participante" aria-label="Buscar participante en el programa" aria-expanded="false" aria-controls="publicParticipantResults" data-public-participant-search><div id="publicParticipantResults" class="public-participant-results" role="listbox" hidden></div></div><div class="public-filter-actions"><div class="public-filter-chips" aria-live="polite">${chips}</div>${publicProgramParticipantIds.length?'<button type="button" class="public-clear-filter" data-public-participant-clear>Quitar filtro</button>':''}</div>${summary}</div>`;
+}
+
+function publicDistributionMarkup(program,participants){
+  const loads=new Map(participants.map(person=>[person.id,0]));
+  (program.assignments||[]).forEach(assignment=>(assignment.participantIds||[]).forEach(id=>{
+    if(loads.has(id))loads.set(id,(loads.get(id)||0)+1);
+  }));
+  const {firstWeek,lastWeek}=calendarWeekBounds(program);
+  const programWeeks=Math.max(1,Math.round((lastWeek-firstWeek)/(7*24*60*60*1000))+1);
+  const maxLoad=Math.max(1,...loads.values());
+  const withAssignments=participants.filter(person=>(loads.get(person.id)||0)>0).length;
+  const rows=[...participants].sort((left,right)=>(loads.get(right.id)||0)-(loads.get(left.id)||0)||left.name.localeCompare(right.name,'es')).map(person=>{
+    const count=loads.get(person.id)||0;
+    const reference=Math.max(1,(Number(person.frequencyCount)||1)*programWeeks/(Number(person.frequencyWeeks)||1));
+    const status=count===0?'empty':count>Math.ceil(reference)?'high':'normal';
+    const symbol=status==='empty'?'—':status==='high'?'!':'✓';
+    const statusLabel=status==='empty'?'Sin participaciones':status==='high'?`Por encima de su referencia aproximada de ${reference.toFixed(1)} participaciones`:`Dentro de su referencia aproximada de ${reference.toFixed(1)} participaciones`;
+    const width=Math.round((count/maxLoad)*100);
+    return `<button type="button" class="public-distribution-row is-${status} ${publicProgramParticipantIds.length===1&&publicProgramParticipantIds[0]===person.id?'active':''}" data-public-distribution-person="${person.id}" aria-label="Filtrar por ${esc(person.name)}: ${count} ${count===1?'participación':'participaciones'}"><span class="public-distribution-name"><b>${esc(person.name)}</b><strong>${count}</strong></span><span class="public-load-bar" aria-hidden="true"><span style="width:${width}%"></span></span><span class="public-load-status" title="${esc(statusLabel)}" aria-label="${esc(statusLabel)}">${symbol}</span></button>`;
+  }).join('')||'<p class="public-distribution-empty">No hay participantes habilitados.</p>';
+  return `<aside class="public-distribution-panel" aria-label="Distribución de participantes"><div class="public-distribution-metrics"><span><strong>${participants.length}</strong>habilitados</span><span><strong>${withAssignments}</strong>con asignación</span><span><strong>${participants.length-withAssignments}</strong>sin participación</span></div><div class="public-distribution-list">${rows}</div></aside>`;
+}
+
+function attachPublicParticipantFilter(programId,participants){
+  publicProgramFilterController?.abort();
+  publicProgramFilterController=new AbortController();
+  const root=document.querySelector('[data-public-participant-filter]');
+  if(!root)return;
+  const signal=publicProgramFilterController.signal,search=root.querySelector('[data-public-participant-search]'),results=root.querySelector('#publicParticipantResults');
+  const close=()=>{results.hidden=true;search.setAttribute('aria-expanded','false');};
+  const draw=()=>{
+    const term=normalizeText(search.value),matches=participants.filter(person=>!publicProgramParticipantIds.includes(person.id)&&normalizeText(person.name).includes(term));
+    results.innerHTML=matches.map(person=>`<button type="button" role="option" data-public-participant-add="${person.id}">${esc(person.name)}</button>`).join('')||'<p>No hay coincidencias.</p>';
+    results.hidden=false;search.setAttribute('aria-expanded','true');
+    results.querySelectorAll('[data-public-participant-add]').forEach(button=>button.addEventListener('click',()=>{
+      publicProgramParticipantIds.push(button.dataset.publicParticipantAdd);
+      publicProgramJumpToMatch(db.programs.find(program=>program.id===programId));
+      openProgram(programId);
+    },{signal}));
+  };
+  search.addEventListener('focus',draw,{signal});
+  search.addEventListener('input',draw,{signal});
+  search.addEventListener('keydown',event=>{if(event.key==='Escape')close();},{signal});
+  document.addEventListener('pointerdown',event=>{if(!root.contains(event.target))close();},{capture:true,signal});
+  root.querySelectorAll('[data-public-participant-remove]').forEach(button=>button.addEventListener('click',()=>{
+    publicProgramParticipantIds=publicProgramParticipantIds.filter(id=>id!==button.dataset.publicParticipantRemove);
+    openProgram(programId);
+  },{signal}));
+  root.querySelector('[data-public-participant-clear]')?.addEventListener('click',()=>{
+    publicProgramParticipantIds=[];
+    openProgram(programId);
+  },{signal});
+}
+
+function decoratePublicParticipantMatches(program){
+  if(!publicProgramParticipantIds.length)return;
+  document.querySelectorAll('.program-slot[data-assignment-id]').forEach(slot=>{
+    const assignment=program.assignments.find(item=>item.id===slot.dataset.assignmentId);
+    if(!assignment)return;
+    slot.querySelectorAll('.assigned-chip').forEach((chip,index)=>{
+      chip.classList.toggle('public-filter-match',publicProgramParticipantIds.includes(assignment.participantIds[index]));
+    });
+  });
+  document.querySelectorAll('.calendar-week-empty').forEach(message=>{
+    message.textContent='No hay participaciones de las personas seleccionadas durante la semana mostrada.';
+  });
+}
+
+function attachPublicDistribution(programId){
+  document.querySelector('[data-public-distribution-toggle]')?.addEventListener('click',()=>{
+    publicProgramDistributionOpen=!publicProgramDistributionOpen;
+    openProgram(programId);
+  });
+  document.querySelectorAll('[data-public-distribution-person]').forEach(button=>button.addEventListener('click',()=>{
+    publicProgramParticipantIds=[button.dataset.publicDistributionPerson];
+    publicProgramJumpToMatch(db.programs.find(program=>program.id===programId));
+    openProgram(programId);
+  }));
+}
+
+const openPublicProgramBeforeParticipantTools=openProgram;
+openProgram=function(id){
+  const viewport=publicProgramViewport();
+  const program=db.programs.find(item=>item.id===id);
+  if(!program)return;
+  const participants=publicProgramParticipants(program);
+  const participantIds=new Set(participants.map(person=>person.id));
+  publicProgramParticipantIds=publicProgramParticipantIds.filter(id=>participantIds.has(id));
+  openPublicProgramBeforeParticipantTools(id);
+  const viewBar=document.querySelector('.program-viewbar');
+  if(!viewBar)return;
+  const statusAssignments=classifyProgramAssignments(program)[programScope]||program.assignments;
+  const visibleAssignments=publicProgramFilteredAssignments(statusAssignments);
+  const toggle=`<button type="button" class="public-distribution-toggle ${publicProgramDistributionOpen?'is-open':''}" data-public-distribution-toggle aria-expanded="${publicProgramDistributionOpen}" title="${publicProgramDistributionOpen?'Ocultar distribución':'Ver distribución de participantes'}">${publicProgramDistributionOpen?'Ocultar distribución':'Ver distribución'}</button>`;
+  const controls=document.createElement('div');
+  controls.className='public-program-controls';
+  controls.innerHTML=`${publicParticipantFilterMarkup(program,participants,visibleAssignments)}${toggle}`;
+  viewBar.append(controls);
+  const agenda=document.querySelector('.program-agenda');
+  if(agenda&&publicProgramDistributionOpen){
+    agenda.classList.add('has-public-distribution');
+    const content=document.createElement('div');
+    content.className='public-program-content';
+    [...agenda.children].filter(child=>child!==viewBar).forEach(child=>content.append(child));
+    agenda.append(content);
+    content.insertAdjacentHTML('afterend',publicDistributionMarkup(program,participants));
+  }
+  decoratePublicParticipantMatches(program);
+  attachPublicParticipantFilter(program.id,participants);
+  attachPublicDistribution(program.id);
+  restorePublicProgramViewport(viewport);
+};
+
 // Disponibilidad semanal de capitanes para Salidas de predicación.
 // Se conserva separada de la disponibilidad de Predicación pública porque sus
 // horarios son citas puntuales configurables, no turnos públicos.
