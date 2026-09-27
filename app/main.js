@@ -679,6 +679,23 @@ document.addEventListener('click',event=>{
   outreachModule.handleAction(button.dataset.outreachAction,button.dataset.id);
 },true);
 
+// La cabecera del programa público debe identificar claramente el módulo.
+const openPublicProgramBeforeLabel= openProgram;
+openProgram=function(id){
+  openPublicProgramBeforeLabel(id);
+  document.querySelectorAll('.program-head .eyebrow').forEach(element=>{
+    if(element.textContent.trim()==='Plan mensual')element.textContent='Predicación pública';
+  });
+  const viewBar=document.querySelector('.program-viewbar'),
+        heading=viewBar?.querySelector(':scope > div:first-child'),
+        layoutSwitch=viewBar?.querySelector('.program-layout-switch');
+  if(viewBar&&heading&&layoutSwitch){
+    heading.remove();
+    viewBar.prepend(layoutSwitch);
+    viewBar.classList.add('is-compact');
+  }
+};
+
 // Disponibilidad semanal de capitanes para Salidas de predicación.
 // Se conserva separada de la disponibilidad de Predicación pública porque sus
 // horarios son citas puntuales configurables, no turnos públicos.
