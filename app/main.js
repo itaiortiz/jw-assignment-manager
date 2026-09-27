@@ -622,7 +622,7 @@ function renderOutreachCalendarV3(programId){
   captains.sort((left,right)=>(captainLoads.get(right.id)||0)-(captainLoads.get(left.id)||0)||left.name.localeCompare(right.name,'es'));
   const average=captains.length?assignable.length/captains.length:0;
   const maxLoad=Math.max(1,...captainLoads.values());
-  const distributionRows=captains.map(person=>{const count=captainLoads.get(person.id)||0,status=count===0?'empty':count>Math.ceil(average)?'high':'normal',symbol=status==='empty'?'—':status==='high'?'!':'✓',label=status==='empty'?'Sin asignaciones':status==='high'?'Más asignaciones que el promedio':'Distribución equilibrada',width=Math.round((count/maxLoad)*100);return `<button type="button" class="outreach-distribution-row is-${status} ${outreachCalendarParticipantIds.length===1&&outreachCalendarParticipantIds[0]===person.id?'active':''}" data-calendar-distribution-captain="${person.id}" aria-label="Filtrar por ${esc(person.name)}: ${count} asignaciones"><span class="outreach-distribution-name"><b>${esc(person.name)}</b><strong>${count}</strong></span><span class="outreach-load-bar" aria-hidden="true"><span style="width:${width}%"></span></span><span class="outreach-load-status" title="${label}" aria-label="${label}">${symbol}</span></button>`;}).join('')||'<p class="outreach-distribution-empty">No hay capitanes activos.</p>';
+  const distributionRows=captains.map(person=>{const count=captainLoads.get(person.id)||0,status=count===0?'empty':count>Math.ceil(average)?'high':'normal',symbol=status==='empty'?'—':status==='high'?'!':'✓',label=status==='empty'?'Sin asignaciones':status==='high'?'Más asignaciones que el promedio':'Distribución equilibrada',width=Math.round((count/maxLoad)*100),active=outreachCalendarParticipantIds.length===1&&outreachCalendarParticipantIds[0]===person.id;return `<button type="button" class="outreach-distribution-row is-${status} ${active?'active':''}" data-calendar-distribution-captain="${person.id}" aria-label="${active?'Quitar filtro de':'Filtrar por'} ${esc(person.name)}: ${count} asignaciones"><span class="outreach-distribution-name"><b>${esc(person.name)}</b><strong>${count}</strong></span><span class="outreach-load-bar" aria-hidden="true"><span style="width:${width}%"></span></span><span class="outreach-load-status" title="${label}" aria-label="${label}">${symbol}</span></button>`;}).join('')||'<p class="outreach-distribution-empty">No hay capitanes activos.</p>';
   const metric=(scope,label,count)=>`<button type="button" class="outreach-distribution-metric ${outreachCalendarAssignmentScope===scope?'active':''}" data-calendar-distribution-scope="${scope}"><strong>${count}</strong><span>${label}</span></button>`;
   const distributionPanel=`<aside class="outreach-distribution-panel" aria-label="Distribución de capitanes"><div class="outreach-distribution-metrics">${metric('all','salidas',assignable.length)}${metric('assigned','asignadas',assigned.length)}${metric('unassigned','sin capitán',unassigned.length)}</div><div class="outreach-distribution-list">${distributionRows}</div></aside>`;
   const distributionToggle=`<button type="button" class="outreach-distribution-toggle ${outreachDistributionOpen?'is-open':''}" data-calendar-distribution-toggle aria-expanded="${outreachDistributionOpen}" title="${outreachDistributionOpen?'Ocultar distribución':'Ver distribución de capitanes'}">${outreachDistributionOpen?'Ocultar distribución':'Ver Distribución'}${unassigned.length?`<span aria-label="${unassigned.length} sin capitán">${unassigned.length}</span>`:''}</button>`;
@@ -655,8 +655,19 @@ function attachOutreachParticipantFilter(programId,participants){
       renderOutreachCalendarV3(programId);
     });
   };
+  let composing=false,renderQueued=false;
+  const queueResults=()=>{
+    if(composing||renderQueued)return;
+    renderQueued=true;
+    requestAnimationFrame(()=>{
+      renderQueued=false;
+      if(!composing&&search.isConnected)renderResults();
+    });
+  };
   search.onfocus=renderResults;
-  search.oninput=renderResults;
+  search.oncompositionstart=()=>{composing=true;};
+  search.oncompositionend=()=>{composing=false;queueResults();};
+  search.oninput=queueResults;
   search.onkeydown=event=>{if(event.key==='Escape')closeResults();};
   document.addEventListener('pointerdown',event=>{
     if(!root.contains(event.target))closeResults();
@@ -685,7 +696,10 @@ function attachOutreachDistributionPanel(programId){
     renderOutreachCalendarV3(programId);
   });
   document.querySelectorAll('[data-calendar-distribution-captain]').forEach(button=>button.onclick=()=>{
-    outreachCalendarParticipantIds=[button.dataset.calendarDistributionCaptain];
+    const captainId=button.dataset.calendarDistributionCaptain;
+    const isActive=outreachCalendarParticipantIds.length===1&&outreachCalendarParticipantIds[0]===captainId;
+    outreachCalendarParticipantIds=isActive?[]:[captainId];
+    if(isActive)return renderOutreachCalendarV3(programId);
     outreachCalendarScope='all';
     outreachCalendarAssignmentScope='all';
     renderOutreachCalendarV3(programId);
@@ -825,7 +839,8 @@ function publicDistributionMarkup(program,participants){
     const symbol=status==='empty'?'—':status==='high'?'!':'✓';
     const statusLabel=status==='empty'?'Sin participaciones':status==='high'?`Por encima de su referencia aproximada de ${reference.toFixed(1)} participaciones`:`Dentro de su referencia aproximada de ${reference.toFixed(1)} participaciones`;
     const width=Math.round((count/maxLoad)*100);
-    return `<button type="button" class="public-distribution-row is-${status} ${publicProgramParticipantIds.length===1&&publicProgramParticipantIds[0]===person.id?'active':''}" data-public-distribution-person="${person.id}" aria-label="Filtrar por ${esc(person.name)}: ${count} ${count===1?'participación':'participaciones'}"><span class="public-distribution-name"><b>${esc(person.name)}</b><strong>${count}</strong></span><span class="public-load-bar" aria-hidden="true"><span style="width:${width}%"></span></span><span class="public-load-status" title="${esc(statusLabel)}" aria-label="${esc(statusLabel)}">${symbol}</span></button>`;
+    const active=publicProgramParticipantIds.length===1&&publicProgramParticipantIds[0]===person.id;
+    return `<button type="button" class="public-distribution-row is-${status} ${active?'active':''}" data-public-distribution-person="${person.id}" aria-label="${active?'Quitar filtro de':'Filtrar por'} ${esc(person.name)}: ${count} ${count===1?'participación':'participaciones'}"><span class="public-distribution-name"><b>${esc(person.name)}</b><strong>${count}</strong></span><span class="public-load-bar" aria-hidden="true"><span style="width:${width}%"></span></span><span class="public-load-status" title="${esc(statusLabel)}" aria-label="${esc(statusLabel)}">${symbol}</span></button>`;
   }).join('')||'<p class="public-distribution-empty">No hay participantes habilitados.</p>';
   return `<aside class="public-distribution-panel" aria-label="Distribución de participantes"><div class="public-distribution-metrics"><span><strong>${participants.length}</strong>habilitados</span><span><strong>${withAssignments}</strong>con asignación</span><span><strong>${participants.length-withAssignments}</strong>sin participación</span></div><div class="public-distribution-list">${rows}</div></aside>`;
 }
@@ -847,9 +862,20 @@ function attachPublicParticipantFilter(programId,participants){
       openProgram(programId);
     },{signal}));
   };
-  search.addEventListener('focus',draw,{signal});
-  search.addEventListener('input',draw,{signal});
-  search.addEventListener('keydown',event=>{if(event.key==='Escape')close();},{signal});
+  let composing=false,drawQueued=false;
+  const queueDraw=()=>{
+    if(composing||drawQueued)return;
+    drawQueued=true;
+    requestAnimationFrame(()=>{
+      drawQueued=false;
+      if(!composing&&search.isConnected)draw();
+    });
+  };
+  search.onfocus=draw;
+  search.oncompositionstart=()=>{composing=true;};
+  search.oncompositionend=()=>{composing=false;queueDraw();};
+  search.oninput=queueDraw;
+  search.onkeydown=event=>{if(event.key==='Escape')close();};
   document.addEventListener('pointerdown',event=>{if(!root.contains(event.target))close();},{capture:true,signal});
   root.querySelectorAll('[data-public-participant-remove]').forEach(button=>button.addEventListener('click',()=>{
     publicProgramParticipantIds=publicProgramParticipantIds.filter(id=>id!==button.dataset.publicParticipantRemove);
@@ -881,7 +907,10 @@ function attachPublicDistribution(programId){
     openProgram(programId);
   });
   document.querySelectorAll('[data-public-distribution-person]').forEach(button=>button.addEventListener('click',()=>{
-    publicProgramParticipantIds=[button.dataset.publicDistributionPerson];
+    const participantId=button.dataset.publicDistributionPerson;
+    const isActive=publicProgramParticipantIds.length===1&&publicProgramParticipantIds[0]===participantId;
+    publicProgramParticipantIds=isActive?[]:[participantId];
+    if(isActive)return openProgram(programId);
     publicProgramJumpToMatch(db.programs.find(program=>program.id===programId));
     openProgram(programId);
   }));
