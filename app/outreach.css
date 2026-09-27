@@ -24,7 +24,11 @@ html[data-theme="dark"] .captain-no-results{color:#aebfcb}
 .outreach-program-config{margin-top:18px}
 .outreach-calendar-card{margin-top:18px}
 .outreach-viewbar{display:flex;align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap}
-.outreach-participant-filter{position:relative;display:grid;gap:6px;min-width:min(100%,330px);flex:1 1 330px;max-width:460px;margin-left:auto}
+.outreach-calendar-controls{display:flex;align-items:flex-start;justify-content:flex-end;gap:8px;flex-wrap:wrap;width:100%;margin-left:auto}
+.outreach-participant-filter{position:relative;display:grid;gap:6px;min-width:min(100%,330px);flex:1 1 330px;max-width:460px}
+.outreach-distribution-toggle{display:inline-flex;min-height:38px;align-items:center;gap:7px;padding:8px 11px;border:1px solid #397aa1;border-radius:7px;background:#eef7fc;color:#245875;font:750 .84rem Arial,Helvetica,sans-serif;cursor:pointer;white-space:nowrap}
+.outreach-distribution-toggle:hover,.outreach-distribution-toggle:focus-visible,.outreach-distribution-toggle.is-open{border-color:#1769aa;background:#dff0fa;outline:0}
+.outreach-distribution-toggle span{display:grid;min-width:20px;height:20px;padding:0 5px;place-items:center;border-radius:999px;background:#bf4d43;color:#fff;font-size:.76rem;font-weight:850}
 .outreach-participant-filter>label{color:#315f79;font-size:.78rem;font-weight:800}
 .outreach-participant-search{position:relative}
 .outreach-participant-search input{width:100%;min-height:38px;padding:8px 11px;border:1px solid #b9d2e1;border-radius:7px;background:#fff;color:#234b64;font:inherit}
@@ -41,6 +45,25 @@ html[data-theme="dark"] .captain-no-results{color:#aebfcb}
 .outreach-clear-filter{padding:4px 0;border:0;background:transparent;color:#1769aa;font-size:.8rem;font-weight:750;text-decoration:underline;cursor:pointer}
 .outreach-clear-filter:hover,.outreach-clear-filter:focus-visible{color:#0f517f;outline:0}
 .outreach-filter-summary{margin:0;color:#557082;font-size:.8rem;font-weight:650}
+.outreach-calendar-layout{display:grid;grid-template-columns:minmax(0,1fr);gap:14px;align-items:start}.outreach-calendar-layout.has-distribution{grid-template-columns:minmax(0,1fr) 316px}
+.outreach-distribution-panel{position:sticky;top:16px;display:grid;grid-template-rows:auto minmax(0,1fr);height:calc(100vh - 110px);min-height:520px;gap:12px;padding:14px;border:1px solid #c7dce8;border-radius:9px;background:#f8fcfe;color:#234b64;box-sizing:border-box}
+.outreach-distribution-panel h3{margin:0;color:#173f59;font-size:1rem}
+.outreach-distribution-metrics{display:grid;grid-template-columns:repeat(3,1fr);overflow:hidden;border:1px solid #c7dce8;border-radius:7px;background:#fff}
+.outreach-distribution-metric{display:grid;gap:2px;padding:10px 6px;border:0;border-right:1px solid #dbe8ee;background:transparent;color:#557082;text-align:center;cursor:pointer}
+.outreach-distribution-metric:last-child{border-right:0}
+.outreach-distribution-metric strong{color:#1769aa;font-size:1.35rem;line-height:1}
+.outreach-distribution-metric span{font-size:.72rem;font-weight:700}
+.outreach-distribution-metric:nth-child(2) strong{color:#268158}.outreach-distribution-metric:nth-child(3) strong{color:#bf4d43}
+.outreach-distribution-metric:hover,.outreach-distribution-metric:focus-visible,.outreach-distribution-metric.active{background:#e7f2fb;outline:0}
+.outreach-distribution-list{display:grid;align-content:start;gap:7px;min-height:0;overflow:auto;padding-right:2px}
+.outreach-distribution-row{display:grid;grid-template-columns:minmax(0,1fr) 20px;gap:5px 9px;align-items:center;width:100%;padding:8px 9px;border:1px solid #d5e2e9;border-radius:7px;background:#fff;color:#234b64;text-align:left;cursor:pointer}
+.outreach-distribution-row:hover,.outreach-distribution-row:focus-visible,.outreach-distribution-row.active{border-color:#3789b8;background:#eef8fd;box-shadow:0 0 0 2px #4ca6df24;outline:0}
+.outreach-distribution-name{display:flex;min-width:0;align-items:center;justify-content:space-between;gap:8px}.outreach-distribution-name b{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:.84rem}.outreach-distribution-name strong{flex:0 0 auto;color:#1769aa;font-size:.96rem}
+.outreach-load-bar{grid-column:1;display:block;height:7px;overflow:hidden;border-radius:999px;background:#d9e8ef}.outreach-load-bar span{display:block;height:100%;border-radius:inherit;background:#339bd1}
+.outreach-load-status{grid-column:2;grid-row:1/3;display:grid;width:20px;height:20px;place-items:center;border-radius:50%;background:#dff3e8;color:#227247;font-size:.78rem;font-weight:900}
+.outreach-distribution-row.is-high .outreach-load-bar span{background:#d7992d}.outreach-distribution-row.is-high .outreach-load-status{background:#fff1d2;color:#926212}
+.outreach-distribution-row.is-empty .outreach-load-bar span{background:#94a7b3}.outreach-distribution-row.is-empty .outreach-load-status{background:#e8eef1;color:#657782}.outreach-distribution-row.is-empty .outreach-distribution-name strong{color:#657782}
+.outreach-distribution-empty{margin:0;color:#6d8290;font-size:.86rem}
 .outreach-calendar-actions{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
 .outreach-export-menu{position:relative;z-index:8}
 .outreach-export-menu>summary{display:inline-flex;align-items:center;min-height:36px;padding:8px 12px;border-radius:6px;background:#1769aa;color:#fff;font-size:.9rem;font-weight:750;cursor:pointer;list-style:none}
@@ -86,6 +109,18 @@ html[data-theme="dark"] .captain-no-results{color:#aebfcb}
 .outreach-conflict{color:#9a3629!important}
 html[data-theme="dark"] .captain-results button.is-unavailable,html[data-theme="dark"] .captain-results button.is-unavailable:hover{background:#5a3d20;color:#ffe0a7}
 html[data-theme="dark"] .outreach-calendar{border-color:#304354;background:#172630}
+html[data-theme="dark"] .outreach-distribution-toggle{border-color:#38657c;background:#1d3a4b;color:#c9e9fa}html[data-theme="dark"] .outreach-distribution-toggle:hover,html[data-theme="dark"] .outreach-distribution-toggle:focus-visible,html[data-theme="dark"] .outreach-distribution-toggle.is-open{border-color:#83cef4;background:#24516a}
+html[data-theme="dark"] .outreach-distribution-panel{border-color:#304354;background:#172630;color:#d7e8f2}
+html[data-theme="dark"] .outreach-distribution-panel h3{color:#dcecf5}
+html[data-theme="dark"] .outreach-distribution-metrics{border-color:#304354;background:#1c303b}
+html[data-theme="dark"] .outreach-distribution-metric{border-color:#304354;color:#b7c8d3}
+html[data-theme="dark"] .outreach-distribution-metric strong,html[data-theme="dark"] .outreach-distribution-name strong{color:#83cef4}
+html[data-theme="dark"] .outreach-distribution-metric:nth-child(2) strong{color:#80e5aa}html[data-theme="dark"] .outreach-distribution-metric:nth-child(3) strong{color:#ff978f}
+html[data-theme="dark"] .outreach-distribution-metric:hover,html[data-theme="dark"] .outreach-distribution-metric:focus-visible,html[data-theme="dark"] .outreach-distribution-metric.active{background:#203e4e}
+html[data-theme="dark"] .outreach-distribution-row{border-color:#304354;background:#1c303b;color:#d7e8f2}
+html[data-theme="dark"] .outreach-distribution-row:hover,html[data-theme="dark"] .outreach-distribution-row:focus-visible,html[data-theme="dark"] .outreach-distribution-row.active{border-color:#4ca6df;background:#203e4e}
+html[data-theme="dark"] .outreach-load-bar{background:#29495a}html[data-theme="dark"] .outreach-distribution-row.is-empty .outreach-distribution-name strong{color:#b7c8d3}
+html[data-theme="dark"] .outreach-distribution-row.is-empty .outreach-load-status{background:#334956;color:#c5d6df}
 html[data-theme="dark"] .outreach-participant-filter>label{color:#c8e2f1}
 html[data-theme="dark"] .outreach-participant-search input{border-color:#38657c;background:#172630;color:#d7e8f2}
 html[data-theme="dark"] .outreach-participant-results{border-color:#38657c;background:#172630;box-shadow:0 8px 20px #0006}
@@ -107,7 +142,8 @@ html[data-theme="dark"] .outreach-calendar-inactive{border-color:#89713a;backgro
 html[data-theme="dark"] .outreach-agenda-item{border-color:#304354;background:#172630}
 html[data-theme="dark"] .outreach-agenda-item.is-unassigned{background:#352f20}
 html[data-theme="dark"] .outreach-agenda-item small{color:#b7c8d3}
-@media(max-width:720px){.outreach-viewbar{align-items:flex-start;flex-direction:column}.outreach-participant-filter{width:100%;max-width:none}.outreach-calendar-actions{width:100%;justify-content:space-between}.outreach-agenda-item{grid-template-columns:1fr;gap:8px}.outreach-agenda-item .manage-assignment{justify-self:start}}
+@media(max-width:720px){.outreach-viewbar{align-items:flex-start;flex-direction:column}.outreach-calendar-controls{align-items:stretch}.outreach-participant-filter{width:100%;max-width:none}.outreach-distribution-toggle{justify-content:center}.outreach-calendar-actions{width:100%;justify-content:space-between}.outreach-agenda-item{grid-template-columns:1fr;gap:8px}.outreach-agenda-item .manage-assignment{justify-self:start}}
+@media(max-width:1500px){.outreach-calendar-layout.has-distribution{grid-template-columns:1fr}.outreach-distribution-panel{position:static;height:auto;min-height:0}.outreach-distribution-list{grid-template-columns:repeat(auto-fit,minmax(240px,1fr))}}
 
 /* Edición directa de salidas */
 .outreach-edit-date{display:block;margin:0 0 5px;color:#6d8290;font-size:.78rem;font-weight:700;letter-spacing:.02em}
@@ -272,6 +308,7 @@ html[data-theme="dark"] #modal .captain-option-status.is-unavailable{
 #modal .captain-availability-empty{margin:0;padding:15px;border:1px dashed #b5cbd8;border-radius:8px;color:#5f7787;text-align:center}
 #modal .captain-availability-notice{display:grid;gap:4px;margin-top:13px;padding:10px 12px;border:1px solid #b8d4e3;border-radius:8px;background:#f2f9fd;color:#24516a;font-size:.84rem}
 #modal .captain-availability-notice[hidden]{display:none!important}
+#modal .captain-exception-choice[hidden]{display:none!important}
 #modal .captain-availability-notice.is-available{border-color:#79c59b;background:#edf9f1;color:#176b3d}
 #modal .captain-availability-notice.is-unavailable{border-color:#e1ae79;background:#fff7eb;color:#8a541a}
 #modal .captain-exception-choice{margin-top:10px;padding:10px 12px;border:1px solid #e1ae79;border-radius:8px;background:#fff8ed;color:#805018}

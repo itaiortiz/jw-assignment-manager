@@ -505,8 +505,22 @@ navGroups.forEach(group=>{
 });
 document.querySelectorAll('#nav button[data-view]').forEach(button=>button.onclick=()=>setNavigation(button.dataset.view));
 let outreachCalendarScope='all';
+let outreachCalendarAssignmentScope='all';
 let outreachCalendarParticipantIds=[];
+let outreachDistributionOpen=false;
 let outreachParticipantFilterController;
+function outreachCalendarViewport(){
+  const distributionList=document.querySelector('.outreach-distribution-list');
+  return {x:window.scrollX||0,y:window.scrollY||0,distributionTop:distributionList?.scrollTop||0};
+}
+function restoreOutreachCalendarViewport(viewport){
+  if(!viewport)return;
+  requestAnimationFrame(()=>requestAnimationFrame(()=>{
+    window.scrollTo(viewport.x,viewport.y);
+    const distributionList=document.querySelector('.outreach-distribution-list');
+    if(distributionList)distributionList.scrollTop=viewport.distributionTop;
+  }));
+}
 function outreachSlots(program){
   const [year,month]=program.month.split('-').map(Number),last=new Date(year,month,0,12).getDate(),slots=[];
   for(let day=1;day<=last;day++){const d=new Date(year,month-1,day,12),date=`${year}-${String(month).padStart(2,'0')}-${String(day).padStart(2,'0')}`;db.outreach.rules.filter(rule=>rule.active&&rule.weekday===d.getDay()).forEach(rule=>slots.push({date,time:rule.time,scheduleId:rule.id}));}
@@ -579,14 +593,21 @@ function outreachProgramSummary(program){
   };
 }
 function renderOutreachCalendarV3(programId){
+  const viewport=outreachCalendarViewport();
   const program=db.outreach.programs.find(item=>item.id===programId);if(!program)return;
   const summaryData=outreachProgramSummary(program),all=[...summaryData.items].sort((left,right)=>left.assignment.date.localeCompare(right.assignment.date)||left.assignment.time.localeCompare(right.assignment.time));
-  const scopeItems=outreachCalendarScope==='complete'?summaryData.complete:outreachCalendarScope==='pending'?summaryData.pending:outreachCalendarScope==='warning'?summaryData.warning:outreachCalendarScope==='inactive'?summaryData.inactive:all;
   const people=new Map(db.participants.map(item=>[item.id,item]));
-  const participantIds=new Set(all.map(item=>item.assignment.captainId).filter(Boolean));
-  outreachCalendarParticipantIds=outreachCalendarParticipantIds.filter(id=>participantIds.has(id));
-  const participants=[...participantIds].map(id=>people.get(id)).filter(Boolean).sort((left,right)=>left.name.localeCompare(right.name,'es'));
-  const selected=outreachCalendarParticipantIds.length?scopeItems.filter(item=>outreachCalendarParticipantIds.includes(item.assignment.captainId)):scopeItems;
+  const captainRole=db.types.find(type=>normalizeText(type.name)==='capitan');
+  const assignedCaptainIds=new Set(all.map(item=>item.assignment.captainId).filter(Boolean));
+  const captains=captainRole?db.participants.filter(person=>person.active&&(person.typeIds||[]).includes(captainRole.id)):[...assignedCaptainIds].map(id=>people.get(id)).filter(Boolean);
+  const captainIds=new Set(captains.map(person=>person.id));
+  outreachCalendarParticipantIds=outreachCalendarParticipantIds.filter(id=>captainIds.has(id));
+  const assignable=all.filter(item=>item.assignment.inactive!==true);
+  const assigned=assignable.filter(item=>item.assignment.captainId);
+  const unassigned=assignable.filter(item=>!item.assignment.captainId);
+  const statusItems=outreachCalendarScope==='complete'?summaryData.complete:outreachCalendarScope==='pending'?summaryData.pending:outreachCalendarScope==='warning'?summaryData.warning:outreachCalendarScope==='inactive'?summaryData.inactive:all;
+  const assignmentItems=outreachCalendarAssignmentScope==='assigned'?statusItems.filter(item=>item.assignment.inactive!==true&&item.assignment.captainId):outreachCalendarAssignmentScope==='unassigned'?statusItems.filter(item=>item.assignment.inactive!==true&&!item.assignment.captainId):statusItems;
+  const selected=outreachCalendarParticipantIds.length?assignmentItems.filter(item=>outreachCalendarParticipantIds.includes(item.assignment.captainId)):assignmentItems;
   const byDate=selected.reduce((map,item)=>{(map[item.assignment.date]||=[]).push(item);return map;},{}),[year,month]=program.month.split('-').map(Number),first=new Date(year,month-1,1,12),end=new Date(year,month,0,12),start=new Date(first);start.setDate(first.getDate()-((first.getDay()+6)%7));
   const places=new Map(db.outreach.places.map(item=>[item.id,item])),iso=value=>`${value.getFullYear()}-${String(value.getMonth()+1).padStart(2,'0')}-${String(value.getDate()).padStart(2,'0')}`;
   const event=item=>{const assignment=item.assignment,status=item.status,place=places.get(assignment.placeId),person=people.get(assignment.captainId),title=status.reasons.join(' '),details=status.kind==='inactive'?`<small class="outreach-event-inactive-reason">${esc(assignment.inactiveReason||'Sin actividad')}</small>`:`<b class="outreach-event-captain"><span class="outreach-captain-icon" aria-hidden="true">🧑‍💼</span>${esc(person?.name||'Sin capitán')}</b><small class="outreach-event-place"><span class="outreach-place-icon" aria-hidden="true">🏠</span>${esc(place?.name||'Sin lugar de encuentro')}</small>`;return `<button type="button" class="outreach-calendar-event is-${status.kind}" title="${esc(title)}" data-calendar-action="edit" data-id="${assignment.id}"><span>${esc(outreachTimeLabel(assignment))}</span>${details}</button>`;};
@@ -595,9 +616,21 @@ function renderOutreachCalendarV3(programId){
   const selectedParticipants=outreachCalendarParticipantIds.map(id=>people.get(id)).filter(Boolean);
   const participantChips=selectedParticipants.map(person=>`<span class="outreach-filter-chip">${esc(person.name)}<button type="button" aria-label="Quitar a ${esc(person.name)} del filtro" data-calendar-participant-remove="${person.id}">×</button></span>`).join('');
   const filterMessage=outreachCalendarParticipantIds.length?`<p class="outreach-filter-summary" aria-live="polite">${selected.length} ${selected.length===1?'participación encontrada':'participaciones encontradas'}${selected.length?'':' con los filtros seleccionados.'}</p>`:'';
-  const participantFilter=`<div class="outreach-participant-filter" data-calendar-participant-filter><div class="outreach-participant-search"><input id="calendarParticipantSearch" type="search" autocomplete="off" placeholder="Buscar capitán" aria-label="Buscar capitán en el calendario" aria-expanded="false" aria-controls="calendarParticipantResults" data-calendar-participant-search><div id="calendarParticipantResults" class="outreach-participant-results" role="listbox" hidden></div></div><div class="outreach-filter-actions"><div class="outreach-filter-chips" aria-live="polite">${participantChips}</div>${outreachCalendarParticipantIds.length||outreachCalendarScope!=='all'?'<button type="button" class="outreach-clear-filter" data-calendar-participant-clear>Limpiar filtros</button>':''}</div>${filterMessage}</div>`;
-  document.querySelector('#app').innerHTML=`<section class="program-head card"><div class="toolbar"><div><span class="eyebrow">Salidas de predicación</span><h2>Programa ${esc(formatMonth(program.month))}</h2><span class="outreach-review-tag ${state}">${state==='reviewed'?'Revisado':'En edición'}</span></div><div class="toolbar program-tools">${changes?`<button type="button" class="update-program-button" data-calendar-action="update" data-id="${program.id}">Actualizar programa (${changes})</button>`:''}<button type="button" data-calendar-action="review" data-id="${program.id}" ${state==='reviewed'?'disabled':''}>${state==='reviewed'?'Revisado ✓':'Marcar como revisado'}</button><button type="button" data-outreach-action="exportPdf" data-id="${program.id}">Imprimir / PDF</button></div></div></section><section class="program-summary outreach-program-summary" aria-label="Resumen y filtros del programa">${summary('all','Total',summaryData.total,'total','salidas programadas en el mes')}${summary('complete','Completas',summaryData.complete.length,'complete','sin incidencias')}${summary('pending','Pendientes',summaryData.pending.length,'pending','faltan datos por completar')}${summary('warning','Advertencias',summaryData.warning.length,'warning','requieren atención')}${summary('inactive','Sin actividad',summaryData.inactive.length,'inactive','')}</section><section class="card outreach-calendar-card"><div class="outreach-viewbar">${participantFilter}</div><div class="outreach-calendar"><div class="outreach-calendar-context"><strong>${esc(formatMonth(program.month))}</strong><div class="outreach-calendar-weekdays"><span>Lun</span><span>Mar</span><span>Mié</span><span>Jue</span><span>Vie</span><span>Sáb</span><span>Dom</span></div></div><div class="outreach-calendar-grid">${cells}</div></div></section>`;
-  attachOutreachParticipantFilter(program.id,participants);
+  const participantFilter=`<div class="outreach-participant-filter" data-calendar-participant-filter><div class="outreach-participant-search"><input id="calendarParticipantSearch" type="search" autocomplete="off" placeholder="Buscar capitán" aria-label="Buscar capitán en el calendario" aria-expanded="false" aria-controls="calendarParticipantResults" data-calendar-participant-search><div id="calendarParticipantResults" class="outreach-participant-results" role="listbox" hidden></div></div><div class="outreach-filter-actions"><div class="outreach-filter-chips" aria-live="polite">${participantChips}</div>${outreachCalendarParticipantIds.length||outreachCalendarScope!=='all'||outreachCalendarAssignmentScope!=='all'?'<button type="button" class="outreach-clear-filter" data-calendar-participant-clear>Limpiar filtros</button>':''}</div>${filterMessage}</div>`;
+  const captainLoads=new Map(captains.map(person=>[person.id,0]));
+  assigned.forEach(item=>captainLoads.set(item.assignment.captainId,(captainLoads.get(item.assignment.captainId)||0)+1));
+  captains.sort((left,right)=>(captainLoads.get(right.id)||0)-(captainLoads.get(left.id)||0)||left.name.localeCompare(right.name,'es'));
+  const average=captains.length?assignable.length/captains.length:0;
+  const maxLoad=Math.max(1,...captainLoads.values());
+  const distributionRows=captains.map(person=>{const count=captainLoads.get(person.id)||0,status=count===0?'empty':count>Math.ceil(average)?'high':'normal',symbol=status==='empty'?'—':status==='high'?'!':'✓',label=status==='empty'?'Sin asignaciones':status==='high'?'Más asignaciones que el promedio':'Distribución equilibrada',width=Math.round((count/maxLoad)*100);return `<button type="button" class="outreach-distribution-row is-${status} ${outreachCalendarParticipantIds.length===1&&outreachCalendarParticipantIds[0]===person.id?'active':''}" data-calendar-distribution-captain="${person.id}" aria-label="Filtrar por ${esc(person.name)}: ${count} asignaciones"><span class="outreach-distribution-name"><b>${esc(person.name)}</b><strong>${count}</strong></span><span class="outreach-load-bar" aria-hidden="true"><span style="width:${width}%"></span></span><span class="outreach-load-status" title="${label}" aria-label="${label}">${symbol}</span></button>`;}).join('')||'<p class="outreach-distribution-empty">No hay capitanes activos.</p>';
+  const metric=(scope,label,count)=>`<button type="button" class="outreach-distribution-metric ${outreachCalendarAssignmentScope===scope?'active':''}" data-calendar-distribution-scope="${scope}"><strong>${count}</strong><span>${label}</span></button>`;
+  const distributionPanel=`<aside class="outreach-distribution-panel" aria-label="Distribución de capitanes"><div class="outreach-distribution-metrics">${metric('all','salidas',assignable.length)}${metric('assigned','asignadas',assigned.length)}${metric('unassigned','sin capitán',unassigned.length)}</div><div class="outreach-distribution-list">${distributionRows}</div></aside>`;
+  const distributionToggle=`<button type="button" class="outreach-distribution-toggle ${outreachDistributionOpen?'is-open':''}" data-calendar-distribution-toggle aria-expanded="${outreachDistributionOpen}" title="${outreachDistributionOpen?'Ocultar distribución':'Ver distribución de capitanes'}">${outreachDistributionOpen?'Ocultar distribución':'Ver Distribución'}${unassigned.length?`<span aria-label="${unassigned.length} sin capitán">${unassigned.length}</span>`:''}</button>`;
+  document.querySelector('#app').innerHTML=`<section class="program-head card"><div class="toolbar"><div><span class="eyebrow">Salidas de predicación</span><h2>Programa ${esc(formatMonth(program.month))}</h2><span class="outreach-review-tag ${state}">${state==='reviewed'?'Revisado':'En edición'}</span></div><div class="toolbar program-tools">${changes?`<button type="button" class="update-program-button" data-calendar-action="update" data-id="${program.id}">Actualizar programa (${changes})</button>`:''}<button type="button" data-calendar-action="review" data-id="${program.id}" ${state==='reviewed'?'disabled':''}>${state==='reviewed'?'Revisado ✓':'Marcar como revisado'}</button><button type="button" data-outreach-action="exportPdf" data-id="${program.id}">Imprimir / PDF</button></div></div></section><section class="program-summary outreach-program-summary" aria-label="Resumen y filtros del programa">${summary('all','Total',summaryData.total,'total','salidas programadas en el mes')}${summary('complete','Completas',summaryData.complete.length,'complete','sin incidencias')}${summary('pending','Pendientes',summaryData.pending.length,'pending','faltan datos por completar')}${summary('warning','Advertencias',summaryData.warning.length,'warning','requieren atención')}${summary('inactive','Sin actividad',summaryData.inactive.length,'inactive','')}</section><section class="card outreach-calendar-card"><div class="outreach-viewbar"><div class="outreach-calendar-controls">${participantFilter}${distributionToggle}</div></div><div class="outreach-calendar-layout ${outreachDistributionOpen?'has-distribution':''}"><div class="outreach-calendar"><div class="outreach-calendar-context"><strong>${esc(formatMonth(program.month))}</strong><div class="outreach-calendar-weekdays"><span>Lun</span><span>Mar</span><span>Mié</span><span>Jue</span><span>Vie</span><span>Sáb</span><span>Dom</span></div></div><div class="outreach-calendar-grid">${cells}</div></div>${outreachDistributionOpen?distributionPanel:''}</div></section>`;
+  attachOutreachParticipantFilter(program.id,captains);
+  attachOutreachDistributionPanel(program.id);
+  decorateOutreachExportControl();
+  restoreOutreachCalendarViewport(viewport);
 }
 
 function attachOutreachParticipantFilter(programId,participants){
@@ -635,6 +668,26 @@ function attachOutreachParticipantFilter(programId,participants){
   root.querySelector('[data-calendar-participant-clear]')?.addEventListener('click',()=>{
     outreachCalendarParticipantIds=[];
     outreachCalendarScope='all';
+    outreachCalendarAssignmentScope='all';
+    renderOutreachCalendarV3(programId);
+  });
+}
+
+function attachOutreachDistributionPanel(programId){
+  document.querySelector('[data-calendar-distribution-toggle]')?.addEventListener('click',()=>{
+    outreachDistributionOpen=!outreachDistributionOpen;
+    renderOutreachCalendarV3(programId);
+  });
+  document.querySelectorAll('[data-calendar-distribution-scope]').forEach(button=>button.onclick=()=>{
+    outreachCalendarAssignmentScope=button.dataset.calendarDistributionScope;
+    outreachCalendarScope='all';
+    outreachCalendarParticipantIds=[];
+    renderOutreachCalendarV3(programId);
+  });
+  document.querySelectorAll('[data-calendar-distribution-captain]').forEach(button=>button.onclick=()=>{
+    outreachCalendarParticipantIds=[button.dataset.calendarDistributionCaptain];
+    outreachCalendarScope='all';
+    outreachCalendarAssignmentScope='all';
     renderOutreachCalendarV3(programId);
   });
 }
@@ -867,10 +920,10 @@ editOutreachCalendarAppointmentV2=function(program,appointment){
   });
   const root=document.querySelector('#modal'),inactive=root.querySelector('[name="inactive"]'),search=root.querySelector('[name="search"]'),hidden=root.querySelector('[name="captainId"]'),results=root.querySelector('.captain-results'),time=root.querySelector('[name="time"]'),validation=root.querySelector('[data-captain-validation]'),exceptionField=root.querySelector('[data-exception-field]'),exception=root.querySelector('[name="exception"]');
   const conflictsFor=id=>id?outreachModule.conflictsForAppointment(id,{...appointment,time:time.value,captainId:id,inactive:false},{programId:program.id,assignmentId:appointment.id}):[];
-  const renderValidation=()=>{const conflicts=conflictsFor(hidden.value);if(inactive.value!=='false'||!hidden.value){validation.hidden=true;exceptionField.hidden=true;return;}validation.hidden=false;exceptionField.hidden=!conflicts.length;if(conflicts.length){validation.className='captain-availability-notice is-unavailable';validation.innerHTML=`<strong>No disponible para esta salida</strong><span>${esc(conflicts.map(conflict=>conflict.message).join(' · '))}</span>`;}else{validation.className='captain-availability-notice is-available';validation.innerHTML='<strong>Disponible para esta salida</strong>';exception.checked=false;}};
+  const renderValidation=()=>{const conflicts=conflictsFor(hidden.value);if(inactive.value!=='false'||!hidden.value||!conflicts.length){validation.hidden=true;validation.innerHTML='';exceptionField.hidden=true;exception.checked=false;return;}validation.hidden=false;exceptionField.hidden=false;validation.className='captain-availability-notice is-unavailable';validation.innerHTML=`<strong>No disponible para esta salida</strong><span>${esc(conflicts.map(conflict=>conflict.message).join(' · '))}</span>`;};
   const draw=()=>{const term=normalizeText(search.value);results.innerHTML=captains.filter(person=>normalizeText(person.name).includes(term)).map(person=>{const conflicts=conflictsFor(person.id),reason=conflicts.map(conflict=>conflict.message).join(' · ');return `<button type="button" class="${conflicts.length?'is-unavailable':''}" data-captain-choice="${person.id}" title="${esc(reason)}"><span>${esc(person.name)}</span><small class="captain-option-status${conflicts.length?' is-unavailable':''}">${conflicts.length?'No disponible':'Disponible'}</small></button>`;}).join('')||'<p class="captain-no-results">No hay coincidencias.</p>';results.hidden=false;results.querySelectorAll('[data-captain-choice]').forEach(button=>button.onclick=()=>{const person=captains.find(item=>item.id===button.dataset.captainChoice);if(!person)return;hidden.value=person.id;search.value=person.name;results.hidden=true;exception.checked=appointment.captainId===person.id&&appointment.exception;renderValidation();});};
   const sync=()=>{const off=inactive.value!=='false';root.querySelector('[data-place-field]').hidden=off;root.querySelector('[data-captain-field]').hidden=off;root.querySelector('[data-reason-field]').hidden=!off;results.hidden=true;renderValidation();};
-  search.onfocus=draw;search.oninput=()=>{hidden.value='';exception.checked=false;renderValidation();draw()};time.onchange=()=>{if(!results.hidden)draw();renderValidation()};inactive.onchange=sync;sync();
+  search.onfocus=draw;search.oninput=()=>{hidden.value='';exception.checked=false;renderValidation();draw()};time.onchange=()=>{if(!results.hidden)draw();renderValidation()};inactive.onchange=sync;sync();if(!appointment.inactive&&!appointment.captainId&&inactive.value==='false')requestAnimationFrame(()=>search.focus());
 };
 
 function decorateOutreachExportControl(){
@@ -1052,7 +1105,7 @@ document.addEventListener('click',event=>{
   const activeProgramId=document.querySelector('#app [data-outreach-action="exportPdf"]')?.dataset.id;
   const program=db.outreach.programs.find(item=>item.id===button.dataset.id)||db.outreach.programs.find(item=>item.id===activeProgramId)||db.outreach.programs.find(item=>(item.assignments||[]).some(assignment=>assignment.id===button.dataset.id));
   if(!program)return;
-  if(button.dataset.calendarAction==='scope'){outreachCalendarScope=button.dataset.id;return render();}
+  if(button.dataset.calendarAction==='scope'){outreachCalendarScope=button.dataset.id;outreachCalendarAssignmentScope='all';return render();}
   if(button.dataset.calendarAction==='update')return modal(`<div class="toolbar"><h2>Actualizar programa</h2><button type="button" class="icon-button" data-close aria-label="Cerrar">×</button></div><p class="muted">Aplica los cambios de horarios al calendario.</p><div class="regeneration-options"><label><input type="radio" name="mode" value="keep" checked> <strong>Actualizar y conservar cambios</strong><small>Conserva las salidas editadas manualmente.</small></label><label><input type="radio" name="mode" value="all"> <strong>Actualizar todo</strong><small>Reemplaza todas las salidas con horarios vacíos.</small></label></div><div class="modal-actions"><button type="button" data-close>Cancelar</button><button class="primary">Actualizar programa</button></div>`,(form,dialog)=>{regenerateOutreachProgram(program,form.get('mode')==='keep');save('Actualización de programa de salidas',formatMonth(program.month));dialog.close();outreachCalendarScope='all';render();});
   if(button.dataset.calendarAction==='edit')return editOutreachCalendarAppointmentV2(program,program.assignments.find(item=>item.id===button.dataset.id));
   if(button.dataset.calendarAction==='review'){
