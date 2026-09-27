@@ -130,11 +130,49 @@ if(initialOutreachMenu&&initialOutreachToggle){initialOutreachMenu.hidden=false;
 document.querySelector('#configToggle').onclick=()=>{if(document.querySelector('.sidebar').classList.contains('collapsed')){document.querySelector('#sidebarCollapse').click();if(document.querySelector('#configMenu').hidden)toggleMenu('#configToggle','#configMenu');return}toggleMenu('#configToggle','#configMenu')};
 document.querySelector('#systemToggle')?.addEventListener('click',()=>toggleMenu('#systemToggle','#systemMenu'));
 function programs(){shell(`<div class="card"><div class="toolbar"><div><span class="eyebrow">Predicación pública</span><h2>Programas</h2></div><button class="primary" data-action="newProgram">Crear programa</button></div></div><div class="card">${db.programs.length?`<div class="tablewrap"><table><tr><th>Programa</th><th>Estado</th><th>Actualizado</th><th class="program-actions-header">Acciones</th></tr>${db.programs.map(p=>`<tr><td><button class="program-link" data-action="openProgram" data-id="${p.id}" title="Editar programa ${esc(formatMonth(p.month))}">${esc(formatMonth(p.month))}</button></td><td>${esc(p.status)}</td><td>${new Date(p.updatedAt).toLocaleString()}</td><td class="program-actions"><div class="row-actions"><button class="icon-button" title="Abrir programa" aria-label="Abrir programa ${esc(formatMonth(p.month))}" data-action="openProgram" data-id="${p.id}">↗</button><button class="icon-button" title="Exportar CSV" aria-label="Exportar CSV ${esc(formatMonth(p.month))}" data-action="export" data-id="${p.id}">↓</button><button class="icon-button icon-danger" title="Eliminar programa" aria-label="Eliminar programa ${esc(formatMonth(p.month))}" data-action="deleteProgram" data-id="${p.id}">⌫</button></div></td></tr>`).join('')}</table></div>`:'<p class="empty">Aún no hay programas. Crea el primero para comenzar.</p>'}</div>`)}
+function participantActivityRecords(person){
+ if(!person)return {publicRecords:[],captainRecords:[]};
+ const publicRecords=(db.programs||[]).flatMap(program=>(program.assignments||[]).filter(assignment=>(assignment.participantIds||[]).includes(person.id)).map(assignment=>({kind:'public',date:assignment.date||`${program.month}-01`,program,assignment}))),
+  captainRecords=(db.outreach?.programs||[]).flatMap(program=>(program.assignments||[]).filter(assignment=>assignment.captainId===person.id&&assignment.inactive!==true).map(assignment=>({kind:'captain',date:assignment.date||`${program.month}-01`,program,assignment})));
+ return {publicRecords,captainRecords};
+}
+function participantActivityCount(records,getLabel){
+ const counts=new Map();
+ records.forEach(record=>{const label=getLabel(record);if(!label)return;counts.set(label,(counts.get(label)||0)+1)});
+ return [...counts.entries()].sort((left,right)=>right[1]-left[1]||left[0].localeCompare(right[0],'es'));
+}
+function participantActivityDateLabel(value){
+ if(!value)return 'Sin fecha';
+ const date=new Date(`${value}T12:00:00`);
+ return Number.isNaN(date.getTime())?value:date.toLocaleDateString('es-MX',{day:'numeric',month:'short',year:'numeric'});
+}
+function participantActivityBreakdown(items,empty='Sin registros'){
+ return items.length?items.slice(0,2).map(([label,count])=>`${label} (${count})`).join(' · '):empty;
+}
+function participantActivityTotalLabel(stat){
+ const singular={Asignaciones:'asignación',Salidas:'salida'};
+ return stat.value===1?(singular[stat.label]||stat.label.toLowerCase()):stat.label.toLowerCase();
+}
+function participantActivityContent(person,year='all',month='all'){
+  const selectedMonth=year==='all'?'all':month,
+   {publicRecords,captainRecords}=participantActivityRecords(person),inPeriod=record=>{const value=String(record.date);return (year==='all'||value.slice(0,4)===year)&&(selectedMonth==='all'||value.slice(5,7)===selectedMonth)},
+   publicItems=publicRecords.filter(inPeriod),captainItems=captainRecords.filter(inPeriod),allRecords=[...publicRecords,...captainRecords],
+   captainRole=db.types.find(type=>normalizeText(type.name)==='capitan'),canServeAsCaptain=!!captainRole&&(person.typeIds||[]).includes(captainRole.id),trendRecords=canServeAsCaptain?allRecords:publicRecords,
+   years=[...new Set(trendRecords.map(record=>String(record.date).slice(0,4)).filter(year=>/^\d{4}$/.test(year)))].sort((left,right)=>right.localeCompare(left)),
+   publicPoints=participantActivityCount(publicItems,record=>db.resources.find(resource=>resource.id===record.assignment.resourceId)?.name),publicTurns=participantActivityCount(publicItems,record=>db.turns.find(turn=>turn.id===record.assignment.turnId)?.name),
+   captainPlaces=participantActivityCount(captainItems,record=>db.outreach?.places?.find(place=>place.id===record.assignment.placeId)?.name),captainSchedules=participantActivityCount(captainItems,record=>{const date=new Date(`${record.date}T12:00:00`),rule=db.outreach?.rules?.find(item=>item.active&&item.weekday===date.getDay()&&item.time===record.assignment.time);return rule?`${rule.name} · ${rule.time}`:record.assignment.time}),
+   lastPublic=publicItems.map(record=>record.date).sort().at(-1),lastCaptain=captainItems.map(record=>record.date).sort().at(-1),captainExceptions=captainItems.filter(record=>record.assignment.exception===true).length,
+   monthMap=new Map();
+  trendRecords.filter(inPeriod).forEach(record=>{const month=String(record.date).slice(0,7);if(!/^\d{4}-\d{2}$/.test(month))return;const item=monthMap.get(month)||{public:0,captain:0};item[record.kind]++;monthMap.set(month,item)});
+  const monthly=[...monthMap.entries()].sort((left,right)=>right[0].localeCompare(left[0]));
+  const sourceSection=(kind,title,heading,stats,highlights)=>`<section class="activity-source activity-source-${kind}"><div class="activity-source-heading"><div><span class="eyebrow">${title}</span><h3>${heading}</h3></div><span class="activity-source-total">${stats[0].value} ${participantActivityTotalLabel(stats[0])}</span></div><div class="activity-stat-grid">${stats.map(stat=>`<div class="activity-stat"><strong>${stat.value}</strong><span>${stat.label}</span></div>`).join('')}</div><div class="activity-highlights">${highlights.map(item=>`<div><span>${item.label}</span><strong>${esc(String(item.value))}</strong></div>`).join('')}</div></section>`;
+  const captainSection=canServeAsCaptain?sourceSection('captain','Salidas de predicación','Servicio como capitán',[{value:captainItems.length,label:'Salidas'},{value:new Set(captainItems.map(record=>record.date)).size,label:'Días con actividad'},{value:new Set(captainItems.map(record=>record.program.id)).size,label:'Programas'},{value:captainExceptions,label:'Excepciones'}],[{label:'Lugares más frecuentes',value:participantActivityBreakdown(captainPlaces,'Sin lugares')},{label:'Horarios más frecuentes',value:participantActivityBreakdown(captainSchedules,'Sin horarios')},{label:'Última salida',value:participantActivityDateLabel(lastCaptain)}]):'',trendDescription=canServeAsCaptain?'Comparación de ambas responsabilidades.':'Evolución de la participación pública.',monthlyRows=monthly.map(([month,item])=>`<div class="activity-trend-row"><strong>${esc(formatMonth(month))}</strong><span><b>${item.public}</b> pública${item.public===1?'':'s'}</span>${canServeAsCaptain?`<span><b>${item.captain}</b> como capitán</span>`:''}</div>`).join('');
+   const monthOptions=Array.from({length:12},(_,index)=>{const value=String(index+1).padStart(2,'0'),name=new Date(2020,index,1).toLocaleDateString('es-MX',{month:'long'}),label=name.charAt(0).toUpperCase()+name.slice(1);return `<option value="${value}" ${selected(selectedMonth===value)}>${label}</option>`}).join('');
+   return `<div class="activity-period-control"><div class="activity-period-fields"><label>Año<select data-activity-period="year"><option value="all" ${selected(year==='all')}>Todo el historial</option>${years.map(value=>`<option value="${value}" ${selected(year===value)}>Año ${value}</option>`).join('')}</select></label><label>Mes<select data-activity-period="month" ${year==='all'?'disabled':''}><option value="all" ${selected(selectedMonth==='all')}>Todos los meses</option>${monthOptions}</select></label></div></div>${sourceSection('public','Predicación pública','Participación',[{value:publicItems.length,label:'Asignaciones'},{value:new Set(publicItems.map(record=>record.date)).size,label:'Días con actividad'},{value:new Set(publicItems.map(record=>record.program.id)).size,label:'Programas'},{value:new Set(publicItems.map(record=>record.assignment.resourceId)).size,label:'Puntos'}],[{label:'Puntos más frecuentes',value:participantActivityBreakdown(publicPoints,'Sin puntos')},{label:'Turnos más frecuentes',value:participantActivityBreakdown(publicTurns,'Sin turnos')},{label:'Última actividad',value:participantActivityDateLabel(lastPublic)}])}${captainSection}<section class="activity-trend"><div class="activity-section-heading"><div><span class="eyebrow">Evolución</span><h3>Actividad por mes</h3></div><p class="muted small">${trendDescription}</p></div>${monthly.length?`<div class="activity-trend-list">${monthlyRows}</div>`:'<p class="muted activity-empty">No hay actividad registrada en el periodo seleccionado.</p>'}</section>`;
+}
 function participantActivityMarkup(person){
  if(!person)return '<p class="muted">La actividad aparecerá cuando el participante tenga asignaciones en un programa.</p>';
- const rows=db.programs.map(program=>{const assignments=program.assignments.filter(assignment=>assignment.participantIds.includes(person.id));return {program,assignments}}).filter(row=>row.assignments.length);
- const total=rows.reduce((sum,row)=>sum+row.assignments.length,0);
- return `<div class="activity-metrics"><div><strong>${total}</strong><span>asignaciones históricas</span></div><div><strong>${rows.length}</strong><span>programas con actividad</span></div></div><label class="activity-filter">Filtrar por programa<select data-activity-filter><option value="">Todos los programas</option>${rows.map(({program})=>`<option value="${program.id}">${esc(program.month)} · ${esc(program.status)}</option>`).join('')}</select></label><div class="activity-list">${rows.length?rows.map(({program,assignments})=>{const points=[...new Set(assignments.map(assignment=>db.resources.find(resource=>resource.id===assignment.resourceId)?.name).filter(Boolean))],turnsUsed=[...new Set(assignments.map(assignment=>db.turns.find(turn=>turn.id===assignment.turnId)?.name).filter(Boolean))];return `<article class="activity-row" data-activity-program="${program.id}"><div><strong>${esc(program.month)}</strong><span class="tag">${esc(program.status)}</span></div><b>${assignments.length} asignación${assignments.length===1?'':'es'}</b><small>${esc(points.join(' · ')||'Sin punto')} · ${esc(turnsUsed.join(' · ')||'Sin turno')}</small></article>`}).join(''):'<p class="muted">Todavía no hay actividad registrada en programas.</p>'}</div>`
+ return `<div class="participant-activity" data-activity-root data-activity-person="${esc(person.id)}">${participantActivityContent(person)}</div>`;
 }
 function participantDialog(p){
  const slots=p?db.availabilities.filter(item=>item.participantId===p.id):[],resourceIds=p?db.participantResources.filter(item=>item.participantId===p.id).map(item=>item.resourceId):[],typeIds=p?.typeIds??[],currentState=stateFor(p||{});
@@ -146,7 +184,7 @@ function participants(){
  document.querySelectorAll('[data-filter]').forEach(input=>input.addEventListener('input',event=>{participantFilters[event.target.dataset.filter]=event.target.value;participants()}))
 }
 document.addEventListener('click',event=>{const tab=event.target.closest('[data-participant-tab]');if(!tab)return;const modalRoot=document.querySelector('#modal');modalRoot.querySelectorAll('[data-participant-tab]').forEach(button=>{const active=button===tab;button.classList.toggle('active',active);button.setAttribute('aria-selected',String(active))});modalRoot.querySelectorAll('[data-participant-panel]').forEach(panel=>panel.hidden=panel.dataset.participantPanel!==tab.dataset.participantTab)});
-document.addEventListener('change',event=>{if(!event.target.matches('[data-activity-filter]'))return;const programId=event.target.value;document.querySelectorAll('[data-activity-row]').forEach(row=>row.hidden=!!programId&&row.dataset.activityProgram!==programId)});
+document.addEventListener('change',event=>{const periodField=event.target.closest('[data-activity-period]');if(periodField){const root=periodField.closest('[data-activity-root]'),person=root?db.participants.find(item=>item.id===root.dataset.activityPerson):null;if(root&&person){const yearField=root.querySelector('[data-activity-period="year"]'),monthField=root.querySelector('[data-activity-period="month"]'),year=yearField?.value||'all',month=periodField.dataset.activityPeriod==='year'?'all':monthField?.value||'all';root.innerHTML=participantActivityContent(person,year,month)}return}if(!event.target.matches('[data-activity-filter]'))return;const programId=event.target.value;document.querySelectorAll('[data-activity-row]').forEach(row=>row.hidden=!!programId&&row.dataset.activityProgram!==programId)});
 const spouseFor=person=>person?.spouseId?db.participants.find(candidate=>candidate.id===person.spouseId):undefined;
 const genderClass=person=>person?.gender==='Hombre'?'gender-masculine':person?.gender==='Mujer'?'gender-feminine':'';
 const genderMark=person=>person?.gender?`<span class="gender-mark ${genderClass(person)}" title="${esc(person.gender)}" aria-label="${esc(person.gender)}">${person.gender==='Hombre'?'♂':'♀'}</span>`:'';
@@ -467,6 +505,8 @@ navGroups.forEach(group=>{
 });
 document.querySelectorAll('#nav button[data-view]').forEach(button=>button.onclick=()=>setNavigation(button.dataset.view));
 let outreachCalendarScope='all';
+let outreachCalendarParticipantIds=[];
+let outreachParticipantFilterController;
 function outreachSlots(program){
   const [year,month]=program.month.split('-').map(Number),last=new Date(year,month,0,12).getDate(),slots=[];
   for(let day=1;day<=last;day++){const d=new Date(year,month-1,day,12),date=`${year}-${String(month).padStart(2,'0')}-${String(day).padStart(2,'0')}`;db.outreach.rules.filter(rule=>rule.active&&rule.weekday===d.getDay()).forEach(rule=>slots.push({date,time:rule.time,scheduleId:rule.id}));}
@@ -541,13 +581,62 @@ function outreachProgramSummary(program){
 function renderOutreachCalendarV3(programId){
   const program=db.outreach.programs.find(item=>item.id===programId);if(!program)return;
   const summaryData=outreachProgramSummary(program),all=[...summaryData.items].sort((left,right)=>left.assignment.date.localeCompare(right.assignment.date)||left.assignment.time.localeCompare(right.assignment.time));
-  const selected=outreachCalendarScope==='complete'?summaryData.complete:outreachCalendarScope==='pending'?summaryData.pending:outreachCalendarScope==='warning'?summaryData.warning:outreachCalendarScope==='inactive'?summaryData.inactive:all;
+  const scopeItems=outreachCalendarScope==='complete'?summaryData.complete:outreachCalendarScope==='pending'?summaryData.pending:outreachCalendarScope==='warning'?summaryData.warning:outreachCalendarScope==='inactive'?summaryData.inactive:all;
+  const people=new Map(db.participants.map(item=>[item.id,item]));
+  const participantIds=new Set(all.map(item=>item.assignment.captainId).filter(Boolean));
+  outreachCalendarParticipantIds=outreachCalendarParticipantIds.filter(id=>participantIds.has(id));
+  const participants=[...participantIds].map(id=>people.get(id)).filter(Boolean).sort((left,right)=>left.name.localeCompare(right.name,'es'));
+  const selected=outreachCalendarParticipantIds.length?scopeItems.filter(item=>outreachCalendarParticipantIds.includes(item.assignment.captainId)):scopeItems;
   const byDate=selected.reduce((map,item)=>{(map[item.assignment.date]||=[]).push(item);return map;},{}),[year,month]=program.month.split('-').map(Number),first=new Date(year,month-1,1,12),end=new Date(year,month,0,12),start=new Date(first);start.setDate(first.getDate()-((first.getDay()+6)%7));
-  const places=new Map(db.outreach.places.map(item=>[item.id,item])),people=new Map(db.participants.map(item=>[item.id,item])),iso=value=>`${value.getFullYear()}-${String(value.getMonth()+1).padStart(2,'0')}-${String(value.getDate()).padStart(2,'0')}`;
+  const places=new Map(db.outreach.places.map(item=>[item.id,item])),iso=value=>`${value.getFullYear()}-${String(value.getMonth()+1).padStart(2,'0')}-${String(value.getDate()).padStart(2,'0')}`;
   const event=item=>{const assignment=item.assignment,status=item.status,place=places.get(assignment.placeId),person=people.get(assignment.captainId),title=status.reasons.join(' '),details=status.kind==='inactive'?`<small class="outreach-event-inactive-reason">${esc(assignment.inactiveReason||'Sin actividad')}</small>`:`<b class="outreach-event-captain"><span class="outreach-captain-icon" aria-hidden="true">🧑‍💼</span>${esc(person?.name||'Sin capitán')}</b><small class="outreach-event-place"><span class="outreach-place-icon" aria-hidden="true">🏠</span>${esc(place?.name||'Sin lugar de encuentro')}</small>`;return `<button type="button" class="outreach-calendar-event is-${status.kind}" title="${esc(title)}" data-calendar-action="edit" data-id="${assignment.id}"><span>${esc(outreachTimeLabel(assignment))}</span>${details}</button>`;};
   const cells=Array.from({length:42},(_,index)=>{const date=new Date(start);date.setDate(start.getDate()+index);const value=iso(date),outside=date<first||date>end;return `<section class="outreach-calendar-day ${outside?'outside-month':''}"><header>${date.getDate()}</header>${(byDate[value]||[]).map(event).join('')}</section>`;}).join('');
   const state=outreachCalendarState(program),changes=outreachChanges(program),summary=(id,label,count,kind,description)=>`<button type="button" class="program-summary-card summary-${kind} ${count?'has-items':''} ${outreachCalendarScope===id?'active':''}" data-calendar-action="scope" data-id="${id}"><span>${label}</span><strong>${count}</strong>${description?`<small>${description}</small>`:''}</button>`;
-  document.querySelector('#app').innerHTML=`<section class="program-head card"><div class="toolbar"><div><span class="eyebrow">Salidas de predicación</span><h2>Programa ${esc(formatMonth(program.month))}</h2><span class="outreach-review-tag ${state}">${state==='reviewed'?'Revisado':'En edición'}</span></div><div class="toolbar program-tools">${changes?`<button type="button" class="update-program-button" data-calendar-action="update" data-id="${program.id}">Actualizar programa (${changes})</button>`:''}<button type="button" data-calendar-action="review" data-id="${program.id}" ${state==='reviewed'?'disabled':''}>${state==='reviewed'?'Revisado ✓':'Marcar como revisado'}</button><button type="button" data-outreach-action="exportPdf" data-id="${program.id}">Imprimir / PDF</button></div></div></section><section class="program-summary outreach-program-summary" aria-label="Resumen y filtros del programa">${summary('all','Total',summaryData.total,'total','salidas programadas en el mes')}${summary('complete','Completas',summaryData.complete.length,'complete','sin incidencias')}${summary('pending','Pendientes',summaryData.pending.length,'pending','faltan datos por completar')}${summary('warning','Advertencias',summaryData.warning.length,'warning','requieren atención')}${summary('inactive','Sin actividad',summaryData.inactive.length,'inactive','')}</section><section class="card outreach-calendar-card"><div class="outreach-viewbar"><div><h3>Calendario mensual</h3><p class="muted small">Selecciona una salida para editar hora, estado, lugar de encuentro o capitán.</p></div></div><div class="outreach-calendar"><div class="outreach-calendar-context"><strong>${esc(formatMonth(program.month))}</strong><div class="outreach-calendar-weekdays"><span>Lun</span><span>Mar</span><span>Mié</span><span>Jue</span><span>Vie</span><span>Sáb</span><span>Dom</span></div></div><div class="outreach-calendar-grid">${cells}</div></div></section>`;
+  const selectedParticipants=outreachCalendarParticipantIds.map(id=>people.get(id)).filter(Boolean);
+  const participantChips=selectedParticipants.map(person=>`<span class="outreach-filter-chip">${esc(person.name)}<button type="button" aria-label="Quitar a ${esc(person.name)} del filtro" data-calendar-participant-remove="${person.id}">×</button></span>`).join('');
+  const filterMessage=outreachCalendarParticipantIds.length?`<p class="outreach-filter-summary" aria-live="polite">${selected.length} ${selected.length===1?'participación encontrada':'participaciones encontradas'}${selected.length?'':' con los filtros seleccionados.'}</p>`:'';
+  const participantFilter=`<div class="outreach-participant-filter" data-calendar-participant-filter><div class="outreach-participant-search"><input id="calendarParticipantSearch" type="search" autocomplete="off" placeholder="Buscar capitán" aria-label="Buscar capitán en el calendario" aria-expanded="false" aria-controls="calendarParticipantResults" data-calendar-participant-search><div id="calendarParticipantResults" class="outreach-participant-results" role="listbox" hidden></div></div><div class="outreach-filter-actions"><div class="outreach-filter-chips" aria-live="polite">${participantChips}</div>${outreachCalendarParticipantIds.length||outreachCalendarScope!=='all'?'<button type="button" class="outreach-clear-filter" data-calendar-participant-clear>Limpiar filtros</button>':''}</div>${filterMessage}</div>`;
+  document.querySelector('#app').innerHTML=`<section class="program-head card"><div class="toolbar"><div><span class="eyebrow">Salidas de predicación</span><h2>Programa ${esc(formatMonth(program.month))}</h2><span class="outreach-review-tag ${state}">${state==='reviewed'?'Revisado':'En edición'}</span></div><div class="toolbar program-tools">${changes?`<button type="button" class="update-program-button" data-calendar-action="update" data-id="${program.id}">Actualizar programa (${changes})</button>`:''}<button type="button" data-calendar-action="review" data-id="${program.id}" ${state==='reviewed'?'disabled':''}>${state==='reviewed'?'Revisado ✓':'Marcar como revisado'}</button><button type="button" data-outreach-action="exportPdf" data-id="${program.id}">Imprimir / PDF</button></div></div></section><section class="program-summary outreach-program-summary" aria-label="Resumen y filtros del programa">${summary('all','Total',summaryData.total,'total','salidas programadas en el mes')}${summary('complete','Completas',summaryData.complete.length,'complete','sin incidencias')}${summary('pending','Pendientes',summaryData.pending.length,'pending','faltan datos por completar')}${summary('warning','Advertencias',summaryData.warning.length,'warning','requieren atención')}${summary('inactive','Sin actividad',summaryData.inactive.length,'inactive','')}</section><section class="card outreach-calendar-card"><div class="outreach-viewbar">${participantFilter}</div><div class="outreach-calendar"><div class="outreach-calendar-context"><strong>${esc(formatMonth(program.month))}</strong><div class="outreach-calendar-weekdays"><span>Lun</span><span>Mar</span><span>Mié</span><span>Jue</span><span>Vie</span><span>Sáb</span><span>Dom</span></div></div><div class="outreach-calendar-grid">${cells}</div></div></section>`;
+  attachOutreachParticipantFilter(program.id,participants);
+}
+
+function attachOutreachParticipantFilter(programId,participants){
+  outreachParticipantFilterController?.abort();
+  outreachParticipantFilterController=new AbortController();
+  const root=document.querySelector('[data-calendar-participant-filter]');
+  if(!root)return;
+  const search=root.querySelector('[data-calendar-participant-search]');
+  const results=root.querySelector('.outreach-participant-results');
+  const closeResults=()=>{
+    results.hidden=true;
+    search.setAttribute('aria-expanded','false');
+  };
+  const renderResults=()=>{
+    const term=normalizeText(search.value);
+    const matches=participants.filter(person=>!outreachCalendarParticipantIds.includes(person.id)&&normalizeText(person.name).includes(term));
+    results.innerHTML=matches.map(person=>`<button type="button" role="option" data-calendar-participant-add="${person.id}">${esc(person.name)}</button>`).join('')||'<p>No hay coincidencias.</p>';
+    results.hidden=false;
+    search.setAttribute('aria-expanded','true');
+    results.querySelectorAll('[data-calendar-participant-add]').forEach(button=>button.onclick=()=>{
+      outreachCalendarParticipantIds.push(button.dataset.calendarParticipantAdd);
+      renderOutreachCalendarV3(programId);
+    });
+  };
+  search.onfocus=renderResults;
+  search.oninput=renderResults;
+  search.onkeydown=event=>{if(event.key==='Escape')closeResults();};
+  document.addEventListener('pointerdown',event=>{
+    if(!root.contains(event.target))closeResults();
+  },{capture:true,signal:outreachParticipantFilterController.signal});
+  root.querySelectorAll('[data-calendar-participant-remove]').forEach(button=>button.onclick=()=>{
+    outreachCalendarParticipantIds=outreachCalendarParticipantIds.filter(id=>id!==button.dataset.calendarParticipantRemove);
+    renderOutreachCalendarV3(programId);
+  });
+  root.querySelector('[data-calendar-participant-clear]')?.addEventListener('click',()=>{
+    outreachCalendarParticipantIds=[];
+    outreachCalendarScope='all';
+    renderOutreachCalendarV3(programId);
+  });
 }
 function renderOutreachCalendarV2(programId){
   const program=db.outreach.programs.find(item=>item.id===programId);if(!program)return;
@@ -589,6 +678,183 @@ document.addEventListener('click',event=>{
   event.stopImmediatePropagation();
   outreachModule.handleAction(button.dataset.outreachAction,button.dataset.id);
 },true);
+
+// Disponibilidad semanal de capitanes para Salidas de predicación.
+// Se conserva separada de la disponibilidad de Predicación pública porque sus
+// horarios son citas puntuales configurables, no turnos públicos.
+db.outreach ??= {};
+db.outreach.captainAvailabilities ??= [];
+
+const outreachCaptainRole=()=>db.types.find(type=>normalizeText(type.name)==='capitan');
+const activeOutreachRules=()=>[...(db.outreach.rules||[])].filter(rule=>rule.active).sort((left,right)=>{
+  const leftDay=left.weekday===0?7:left.weekday, rightDay=right.weekday===0?7:right.weekday;
+  return leftDay-rightDay||left.time.localeCompare(right.time)||left.name.localeCompare(right.name,'es');
+});
+const outreachRuleForAppointment=appointment=>{
+  const weekday=new Date(`${appointment.date}T12:00:00`).getDay();
+  const rule=appointment.scheduleId
+    ? db.outreach.rules.find(item=>item.id===appointment.scheduleId)
+    : db.outreach.rules.find(item=>item.active&&item.weekday===weekday&&item.time===appointment.time);
+  return rule?.active&&rule.weekday===weekday&&rule.time===appointment.time?rule:null;
+};
+const captainAvailabilityReasons=(participantId,appointment)=>{
+  const person=db.participants.find(item=>item.id===participantId),role=outreachCaptainRole();
+  if(!person)return [{type:'captain',message:'El capitán ya no existe.'}];
+  if(!person.active)return [{type:'captain',message:'El capitán está inactivo.'}];
+  if(!role||!(person.typeIds||[]).includes(role.id))return [{type:'captain',message:'La persona ya no tiene el rol Capitan.'}];
+  const rule=outreachRuleForAppointment(appointment);
+  if(!rule)return [];
+  const available=db.outreach.captainAvailabilities.some(item=>item.participantId===participantId&&item.ruleId===rule.id);
+  return available?[]:[{type:'availability',message:`No tiene disponibilidad para ${days[rule.weekday].toLowerCase()} · ${rule.name} · ${rule.time}.`}];
+};
+
+const outreachConflictsBeforeCaptainAvailability=outreachModule.conflictsForAppointment;
+outreachModule.conflictsForAppointment=(participantId,appointment,exclusion)=>[
+  ...captainAvailabilityReasons(participantId,appointment).map(item=>({module:'Disponibilidad de salidas',...item})),
+  ...outreachConflictsBeforeCaptainAvailability(participantId,appointment,exclusion)
+];
+
+const participantDialogBeforeOutreachAvailability=participantDialog;
+participantDialog=function(p,returnContext=null){
+  participantDialogBeforeOutreachAvailability(p,returnContext);
+  const dialog=document.querySelector('#modal'),form=dialog?.querySelector('#modalForm'),tabs=dialog?.querySelector('.participant-tabs'),content=form?.querySelector('.modal-scroll-content'),role=outreachCaptainRole();
+  if(!dialog||!form||!tabs||!content||!role)return;
+
+  const storedRuleIds=new Set((db.outreach.captainAvailabilities||[]).filter(item=>item.participantId===p?.id).map(item=>item.ruleId));
+  const panel=document.createElement('section'),tab=document.createElement('button');
+  panel.dataset.participantPanel='outreachAvailability';
+  panel.className='captain-availability-panel';
+  panel.hidden=true;
+  tab.type='button';
+  tab.role='tab';
+  tab.dataset.participantTab='outreachAvailability';
+  tab.setAttribute('aria-selected','false');
+  tab.textContent='Disponibilidad de capitán';
+
+  const rules=activeOutreachRules();
+  const ruleMarkup=rules.length?rules.map(rule=>`<label class="captain-availability-option"><input type="checkbox" name="outreachCaptainSlot" value="${esc(rule.id)}" ${checked(storedRuleIds.has(rule.id))}><span class="captain-availability-check" aria-hidden="true">✓</span><span><strong>${esc(days[rule.weekday])} · ${esc(rule.name)}</strong><small>${esc(rule.time)}</small></span></label>`).join(''):'<p class="captain-availability-empty">No hay horarios activos. Configúralos en Salidas de predicación &gt; Horarios.</p>';
+  panel.innerHTML=`<div class="availability-heading captain-availability-heading"><div><span class="eyebrow">Capitán</span><h3>Disponibilidad para salidas</h3></div><p class="muted small">Marca los horarios en los que puede ser capitán.</p></div><div class="captain-availability-summary"><strong data-outreach-availability-count>0 de ${rules.length} horarios seleccionados</strong><div><button type="button" data-outreach-availability="all">Marcar todos</button><button type="button" data-outreach-availability="clear">Limpiar</button></div></div><div class="captain-availability-list">${ruleMarkup}</div>`;
+  content.append(panel);
+
+  const updateAvailabilityCount=()=>{
+    const selected=panel.querySelectorAll('[name="outreachCaptainSlot"]:checked').length;
+    const count=panel.querySelector('[data-outreach-availability-count]');
+    if(count)count.textContent=`${selected} de ${rules.length} horarios seleccionados`;
+  };
+  const showDetails=()=>tabs.querySelector('[data-participant-tab="details"]')?.click();
+  const hasCaptainRole=()=>form.querySelector(`[name="type"][value="${role.id}"]`)?.checked===true;
+  const syncCaptainTab=()=>{
+    if(hasCaptainRole()){
+      if(!tabs.contains(tab))tabs.insertBefore(tab,tabs.querySelector('[data-participant-tab="activity"]'));
+      return;
+    }
+    if(tab.classList.contains('active'))showDetails();
+    tab.remove();
+    panel.hidden=true;
+  };
+  panel.querySelectorAll('[name="outreachCaptainSlot"]').forEach(input=>input.onchange=updateAvailabilityCount);
+  panel.querySelector('[data-outreach-availability="all"]')?.addEventListener('click',()=>{panel.querySelectorAll('[name="outreachCaptainSlot"]').forEach(input=>input.checked=true);updateAvailabilityCount()});
+  panel.querySelector('[data-outreach-availability="clear"]')?.addEventListener('click',()=>{panel.querySelectorAll('[name="outreachCaptainSlot"]').forEach(input=>input.checked=false);updateAvailabilityCount()});
+  form.querySelector(`[name="type"][value="${role.id}"]`)?.addEventListener('change',syncCaptainTab);
+  updateAvailabilityCount();
+  syncCaptainTab();
+
+  form.onsubmit=event=>{
+    event.preventDefault();
+    const data=new FormData(form),fresh=!p,person=p||{id:uid(),spouseId:''},state=db.states.find(item=>item.id===data.get('stateId')),gender=data.get('gender'),spouseId=data.get('spouseId'),name=data.get('name').trim(),typeIds=data.getAll('type');
+    if(!name)return formError('Escribe el nombre del participante.');
+    if(!state)return formError('Selecciona el estado del participante.');
+    if(!genders.includes(gender))return formError('Selecciona el género del participante.');
+    const linkError=spouseLinkError(person,gender,spouseId);if(linkError)return formError(linkError);
+    person.name=name;person.stateId=state.id;person.active=state.schedulable===true;person.gender=gender;person.typeIds=typeIds;person.notes=data.get('participantNotes')?.trim()||'';if(fresh)db.participants.push(person);setSpouseLink(person,spouseId);
+    db.participantResources=db.participantResources.filter(item=>item.participantId!==person.id);data.getAll('resource').forEach(resourceId=>db.participantResources.push({participantId:person.id,resourceId}));
+    db.availabilities=db.availabilities.filter(item=>item.participantId!==person.id);data.getAll('slot').forEach(value=>{const [turnId,day]=value.split('|');db.availabilities.push({participantId:person.id,turnId,day:+day})});
+    person.frequencyCount=Math.max(1,Math.min(52,Math.floor(Number(data.get('frequencyCount'))||1)));person.frequencyWeeks=Math.max(1,Math.min(52,Math.floor(Number(data.get('frequencyWeeks'))||1)));
+    const captain=typeIds.includes(role.id),selectedRuleIds=new Set(data.getAll('outreachCaptainSlot')),previousRuleIds=new Set((db.outreach.captainAvailabilities||[]).filter(item=>item.participantId===person.id).map(item=>item.ruleId));
+    const availabilityChanged=captain&&(`${[...selectedRuleIds].sort()}`!==`${[...previousRuleIds].sort()}`);
+    if(captain){
+      db.outreach.captainAvailabilities=db.outreach.captainAvailabilities.filter(item=>item.participantId!==person.id);
+      activeOutreachRules().filter(rule=>selectedRuleIds.has(rule.id)).forEach(rule=>db.outreach.captainAvailabilities.push({participantId:person.id,ruleId:rule.id,weekday:rule.weekday,time:rule.time,updatedAt:now()}));
+    }
+    const affected=availabilityChanged?db.outreach.programs.flatMap(program=>(program.assignments||[]).filter(appointment=>appointment.captainId===person.id&&!appointment.inactive&&captainAvailabilityReasons(person.id,appointment).some(reason=>reason.type==='availability'))).length:0;
+    const detail=availabilityChanged?`${person.name}; disponibilidad de salidas actualizada${affected?`; ${affected} asignación${affected===1?'':'es'} requiere${affected===1?'':'n'} revisión`:''}`:person.name;
+    save(fresh?'Creación de participante':'Edición de participante',detail);
+    dialog.close();
+    if(returnContext?.programId){view='programs';openProgram(returnContext.programId);requestAnimationFrame(()=>{const content=document.querySelector('.content-shell');if(content)content.scrollTop=returnContext.scrollTop||0})}else participants();
+  };
+};
+
+// Ajustes de jerarquía visual de la ficha: los puntos se configuran después
+// de la frecuencia, sin mezclar la disponibilidad de predicación pública.
+const participantDialogBeforeLayoutPolish=participantDialog;
+participantDialog=function(p,returnContext=null){
+  participantDialogBeforeLayoutPolish(p,returnContext);
+  const dialog=document.querySelector('#modal'),details=dialog?.querySelector('[data-participant-panel="details"]');
+  if(!dialog||!details)return;
+
+  const eyebrow=dialog.querySelector('.toolbar .eyebrow');
+  if(eyebrow)eyebrow.textContent=p?.name||'Nuevo participante';
+  const activityPanel=dialog.querySelector('[data-participant-panel="activity"]'),activityTitle=activityPanel?.querySelector('h3'),activityDescription=activityPanel?.querySelector('.availability-heading p');
+  if(activityTitle)activityTitle.textContent='Resumen de actividad';
+  if(activityDescription)activityDescription.remove();
+
+  const headings=[...details.querySelectorAll('.availability-heading')];
+  const availabilityHeading=headings.find(heading=>heading.querySelector('h3')?.textContent.trim()==='Disponibilidad de horarios');
+  const frequencyHeading=details.querySelector('.frequency-heading');
+  const resourceHeading=headings.find(heading=>heading.querySelector('h3')?.textContent.trim()==='Lugares asignables');
+  const resources=details.querySelector('.resource-options');
+
+  const availabilityEyebrow=availabilityHeading?.querySelector('.eyebrow');
+  if(availabilityEyebrow)availabilityEyebrow.textContent='Predicación pública';
+  const frequencyEyebrow=frequencyHeading?.querySelector('.eyebrow');
+  if(frequencyEyebrow)frequencyEyebrow.remove();
+  const frequencyTitle=frequencyHeading?.querySelector('h3');
+  if(frequencyTitle)frequencyTitle.textContent='Frecuencia';
+  const resourceTitle=resourceHeading?.querySelector('h3');
+  if(resourceTitle)resourceTitle.textContent='Puntos elegibles';
+  if(frequencyHeading&&resourceHeading&&resources)frequencyHeading.after(resourceHeading,resources);
+};
+
+// Notas libres por participante: permanecen separadas de la información
+// operativa y están disponibles antes del historial de actividad.
+const participantDialogBeforeNotes=participantDialog;
+participantDialog=function(p,returnContext=null){
+  participantDialogBeforeNotes(p,returnContext);
+  const dialog=document.querySelector('#modal'),form=dialog?.querySelector('#modalForm'),tabs=dialog?.querySelector('.participant-tabs'),content=form?.querySelector('.modal-scroll-content'),activityTab=tabs?.querySelector('[data-participant-tab="activity"]');
+  if(!dialog||!form||!tabs||!content||!activityTab)return;
+
+  const tab=document.createElement('button'),panel=document.createElement('section');
+  tab.type='button';
+  tab.role='tab';
+  tab.dataset.participantTab='notes';
+  tab.setAttribute('aria-selected','false');
+  tab.textContent='Notas';
+  panel.dataset.participantPanel='notes';
+  panel.className='participant-notes-panel';
+  panel.hidden=true;
+  panel.innerHTML=`<div class="availability-heading"><div><span class="eyebrow">Participante</span><h3>Notas</h3></div><p class="muted small">Registra información libre que te ayude a dar seguimiento.</p></div><label class="participant-notes-field">Notas<textarea name="participantNotes" rows="11" placeholder="Escribe aquí tus notas sobre este participante…">${esc(p?.notes||'')}</textarea></label>`;
+  tabs.insertBefore(tab,activityTab);
+  content.append(panel);
+};
+
+// El selector de capitanes reutiliza una sola fuente de verdad: disponibilidad
+// declarada, conflictos con predicación pública y conflictos entre salidas.
+editOutreachCalendarAppointmentV2=function(program,appointment){
+  const places=db.outreach.places.filter(item=>item.active||item.id===appointment.placeId),role=outreachCaptainRole(),captains=(role?db.participants.filter(item=>item.active&&(item.typeIds||[]).includes(role.id)):[]).sort((a,b)=>a.name.localeCompare(b.name,'es')),selected=db.participants.find(item=>item.id===appointment.captainId);
+  modal(`<div class="toolbar"><div><span class="eyebrow">${esc(appointment.date)} · ${esc(appointment.time)}</span><h2>Editar salida</h2></div><button type="button" class="icon-button" data-close aria-label="Cerrar">×</button></div><div class="form"><label>Hora<input name="time" type="time" value="${esc(appointment.time)}"></label><label>Estado<select name="inactive"><option value="false" ${!appointment.inactive?'selected':''}>Salida programada</option><option value="true" ${appointment.inactive&&appointment.inactiveType!=='other-plans'?'selected':''}>Sin actividad</option><option value="other-plans" ${appointment.inactiveType==='other-plans'?'selected':''}>Otros planes</option></select></label><label data-place-field><span class="outreach-form-label"><span class="outreach-form-emoji" aria-hidden="true">🏠</span>Lugar de encuentro</span><select name="placeId"><option value="">Sin lugar de encuentro</option>${places.map(item=>`<option value="${item.id}" ${item.id===appointment.placeId?'selected':''}>${esc(item.name)}</option>`).join('')}</select></label><label class="captain-autocomplete" data-captain-field><span class="outreach-form-label"><span class="outreach-form-emoji" aria-hidden="true">🧑‍💼</span>Capitán</span><input name="search" type="search" placeholder="Buscar capitán por nombre" value="${esc(selected?.name||'')}"><input type="hidden" name="captainId" value="${appointment.captainId||''}"><div class="captain-results" hidden></div></label><label class="wide" data-reason-field>Motivo<input name="reason" value="${esc(appointment.inactiveReason||'')}" placeholder="Ej. Asamblea o visita"></label></div><div class="captain-availability-notice" data-captain-validation hidden></div><label class="checkgrid captain-exception-choice" data-exception-field hidden><span><input type="checkbox" name="exception" ${appointment.exception?'checked':''}> Guardar como excepción consciente</span></label><div class="modal-actions"><button type="button" data-close>Cancelar</button><button class="primary">Guardar salida</button></div>`,(data,dialog)=>{
+    const inactiveState=data.get('inactive'),inactive=inactiveState!=='false',inactiveType=inactiveState==='other-plans'?'other-plans':'inactive',captainId=inactive?'':data.get('captainId'),reason=data.get('reason').trim()||(inactiveState==='other-plans'?'Otros planes':'Sin actividad'),draft={...appointment,time:data.get('time'),captainId,inactive};
+    const conflicts=captainId?outreachModule.conflictsForAppointment(captainId,draft,{programId:program.id,assignmentId:appointment.id}):[];
+    if(conflicts.length&&data.get('exception')!=='on')return formError('El capitán no está disponible. Marca “Guardar como excepción consciente” para confirmarlo.');
+    Object.assign(appointment,{time:draft.time,placeId:inactive?'':data.get('placeId'),captainId,inactive,inactiveType:inactive?inactiveType:'',inactiveReason:inactive?reason:'',manual:true,origin:'manual',protected:true,exception:!inactive&&conflicts.length>0&&data.get('exception')==='on',exceptionNote:conflicts.map(conflict=>conflict.message).join(' · ')});
+    program.updatedAt=now();save('Edición de salida',`${appointment.date} · ${appointment.time}`);dialog.close();render();
+  });
+  const root=document.querySelector('#modal'),inactive=root.querySelector('[name="inactive"]'),search=root.querySelector('[name="search"]'),hidden=root.querySelector('[name="captainId"]'),results=root.querySelector('.captain-results'),time=root.querySelector('[name="time"]'),validation=root.querySelector('[data-captain-validation]'),exceptionField=root.querySelector('[data-exception-field]'),exception=root.querySelector('[name="exception"]');
+  const conflictsFor=id=>id?outreachModule.conflictsForAppointment(id,{...appointment,time:time.value,captainId:id,inactive:false},{programId:program.id,assignmentId:appointment.id}):[];
+  const renderValidation=()=>{const conflicts=conflictsFor(hidden.value);if(inactive.value!=='false'||!hidden.value){validation.hidden=true;exceptionField.hidden=true;return;}validation.hidden=false;exceptionField.hidden=!conflicts.length;if(conflicts.length){validation.className='captain-availability-notice is-unavailable';validation.innerHTML=`<strong>No disponible para esta salida</strong><span>${esc(conflicts.map(conflict=>conflict.message).join(' · '))}</span>`;}else{validation.className='captain-availability-notice is-available';validation.innerHTML='<strong>Disponible para esta salida</strong>';exception.checked=false;}};
+  const draw=()=>{const term=normalizeText(search.value);results.innerHTML=captains.filter(person=>normalizeText(person.name).includes(term)).map(person=>{const conflicts=conflictsFor(person.id),reason=conflicts.map(conflict=>conflict.message).join(' · ');return `<button type="button" class="${conflicts.length?'is-unavailable':''}" data-captain-choice="${person.id}" title="${esc(reason)}"><span>${esc(person.name)}</span><small class="captain-option-status${conflicts.length?' is-unavailable':''}">${conflicts.length?'No disponible':'Disponible'}</small></button>`;}).join('')||'<p class="captain-no-results">No hay coincidencias.</p>';results.hidden=false;results.querySelectorAll('[data-captain-choice]').forEach(button=>button.onclick=()=>{const person=captains.find(item=>item.id===button.dataset.captainChoice);if(!person)return;hidden.value=person.id;search.value=person.name;results.hidden=true;exception.checked=appointment.captainId===person.id&&appointment.exception;renderValidation();});};
+  const sync=()=>{const off=inactive.value!=='false';root.querySelector('[data-place-field]').hidden=off;root.querySelector('[data-captain-field]').hidden=off;root.querySelector('[data-reason-field]').hidden=!off;results.hidden=true;renderValidation();};
+  search.onfocus=draw;search.oninput=()=>{hidden.value='';exception.checked=false;renderValidation();draw()};time.onchange=()=>{if(!results.hidden)draw();renderValidation()};inactive.onchange=sync;sync();
+};
 
 function decorateOutreachExportControl(){
   document.querySelectorAll('#app [data-outreach-action="exportPdf"]').forEach(button=>{

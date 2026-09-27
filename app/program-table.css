@@ -77,6 +77,30 @@ html[data-theme="dark"]{color-scheme:dark;--line:#304354;--blue:#4ca6df;--blue-w
 html[data-theme="dark"] .header-system button,html[data-theme="dark"] .header-system-file,html[data-theme="dark"] .theme-toggle{background:transparent!important;border-color:transparent!important}
 /* Ajustes finales de legibilidad e interacción para trabajo continuo. */
 :where(button,input,select,textarea,[tabindex="0"]):focus-visible{outline:2px solid #62b9ea!important;outline-offset:2px}
+
+/* La actividad del participante también debe respetar el tema oscuro. */
+html[data-theme="dark"] .activity-metrics>div{
+  border-color:#405769;
+  background:#1d303d;
+  color:#e5edf3;
+}
+html[data-theme="dark"] .activity-metrics strong,
+html[data-theme="dark"] .activity-row b{
+  color:#8fd0f8;
+}
+html[data-theme="dark"] .activity-metrics span,
+html[data-theme="dark"] .activity-row small{
+  color:#aebfcb;
+}
+html[data-theme="dark"] .activity-row{
+  border-color:#405769;
+  background:#1d303d;
+  color:#e5edf3;
+}
+html[data-theme="dark"] .activity-row .tag{
+  background:#1b4058;
+  color:#b9e2fb;
+}
 .calendar-navigation{gap:18px;margin:7px 0 16px}.calendar-navigation strong{color:#315f79;font-size:.94rem;font-weight:750;letter-spacing:.01em}.calendar-navigation .icon-button{width:36px;height:36px;border-color:#8bb5cc;font-size:1.5rem}.calendar-navigation .icon-button:disabled{opacity:.42;cursor:not-allowed}.calendar-navigation .icon-button:not(:disabled):hover{transform:translateY(-1px)}
 .calendar-slot .slot-status{font-size:.68rem;font-weight:750}.calendar-slot .slot-status::before{width:7px;height:7px}.calendar-slot .unassigned-option{font-weight:700}.calendar-slot-empty.slot-unassigned .unassigned-option{color:#526674}.calendar-slot-empty.slot-pending .unassigned-option{color:#805b13}
 .calendar-slot h4[title]{cursor:help}.calendar-slot .assigned-chip{transition:background .15s ease,box-shadow .15s ease}.calendar-slot .assigned-chip:hover{box-shadow:0 0 0 1px #69b7e34f}
