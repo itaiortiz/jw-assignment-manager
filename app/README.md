@@ -8,18 +8,27 @@ La aplicación funciona sin internet y guarda los datos en el almacenamiento loc
 
 ## Alcance implementado
 
-- Participantes con ficha editable de nombre, estado, tipo y disponibilidad.
-- Catálogo de tipos de participante completamente configurable.
+- Participantes con ficha editable de nombre, estado, roles, notas y disponibilidad.
+- Ficha de participante con pestañas de información, notas y actividad; la pestaña de disponibilidad de capitán solo aparece cuando la persona tiene el rol `Capitan`.
+- Actividad consultable por año y mes, con participación en Predicación pública y estadísticas de servicio como capitán cuando corresponde.
+- Roles predeterminados protegidos: su nombre no se puede cambiar, los roles permiten editar únicamente el color y no se pueden eliminar; los roles adicionales sí son configurables.
+- Estados predeterminados protegidos contra edición y eliminación; los estados adicionales sí son configurables.
 - Turnos y puntos configurables, editables y eliminables cuando no tienen historial asociado.
-- Disponibilidad por día y turno, editable desde la ficha o desde su pantalla.
+- Disponibilidad pública por día y turno, editable desde la ficha o desde su pantalla.
+- Disponibilidad de capitán por cada horario puntual configurado en Salidas de predicación.
 - Generación mensual automática como borrador, con mínimo de dos personas y distribución por carga.
 - Edición manual protegida y regeneración de espacios no protegidos.
 - Detección de incompletos, participantes inactivos y solapamientos.
-- Estados de borrador/publicado.
+- Estados de revisión del programa, incluyendo edición, revisado y cambios sin revisar.
 - Historial, respaldo/restauración, CSV e impresión/PDF.
-- Módulo independiente de Salidas de predicación con programas mensuales, lugares de encuentro, horarios puntuales, capitanes y detección de conflictos con predicación pública.
+- Módulo independiente de Salidas de predicación con programas mensuales, lugares de encuentro, horarios puntuales, capitanes y detección de conflictos con predicación pública, otras salidas y la disponibilidad declarada del capitán.
+- Selector de capitán con opciones disponibles/no disponibles; la opción `Guardar de todos modos` solo se muestra cuando existe un conflicto.
 - Estados `Sin actividad` y `Otros planes` para salidas, con razón predeterminada cuando no se captura texto adicional.
 - Calendarios con referencia persistente al mes, semana y día; encabezados sticky para conservar el contexto durante el scroll.
+- Panel de distribución de Predicación pública con los conteos `habilitados`, `con asignación` y `sin asignación`, filtrado por participante y orden descendente por carga.
+- Panel de distribución de Salidas de predicación con conteos de salidas, asignaciones y salidas sin capitán; ambos paneles son colapsables, conservan el scroll y permiten quitar el filtro al pulsar nuevamente la misma persona.
+- Los Precursores Regulares se distinguen con el color del rol en el borde izquierdo de su tarjeta y el tooltip `Precursor Regular`.
+- Los buscadores con autocompletado protegen la composición de texto en Android y cierran sus resultados al pulsar fuera del control.
 - El modal `Editar salida` identifica cada cita con el día, fecha, horario y hora completos.
 - Tabla de participantes con encabezados y filtros sticky, además de un resumen dinámico del total, resultados mostrados y filtros activos.
 - Tarjetas de calendario con indicadores visuales por estado: completada, pendiente, requiere atención, no disponible o sin actividad.

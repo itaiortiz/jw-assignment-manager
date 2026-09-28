@@ -41,10 +41,12 @@ Cada participante tendrá:
 - Nombre.
 - Tipo: persona, familia o grupo.
 - Estado: activo o inactivo.
-- Observaciones.
-- Disponibilidad.
+- Roles configurables, incluyendo `Capitan` cuando corresponda.
+- Notas libres.
+- Disponibilidad para Predicación pública.
+- Historial de actividad programada.
 
-No se eliminarán físicamente los participantes; se podrán desactivar.
+Se pueden desactivar participantes. La aplicación actual también permite eliminarlos con confirmación explícita y los quita de las asignaciones relacionadas.
 
 ### Recursos iniciales
 
@@ -77,7 +79,7 @@ Cada turno deberá contener:
 - Días permitidos, opcionalmente.
 - Observaciones.
 
-### Disponibilidad
+### Disponibilidad de Predicación pública
 
 La disponibilidad se definirá relacionando:
 
@@ -97,6 +99,12 @@ Regla:
 > Si una combinación de participante, día y turno no está registrada, el participante se considera no disponible.
 
 No es necesario comenzar con rangos de disponibilidad complejos.
+
+### Disponibilidad de capitanes para Salidas de predicación
+
+Para las personas con rol `Capitan`, la ficha agrega una pestaña con los horarios puntuales configurados en Salidas de predicación. La disponibilidad se marca por cada combinación de día y horario de salida, no mediante los turnos de Predicación pública.
+
+Al asignar un capitán en una salida, el sistema valida esta disponibilidad declarada además de las colisiones con Predicación pública y otras salidas. Si existe una incompatibilidad, el usuario puede confirmar explícitamente `Guardar de todos modos`; esa excepción queda registrada y visible.
 
 Debe existir una opción sencilla para bloquear una fecha específica, por ejemplo:
 
@@ -128,11 +136,21 @@ La validación debe funcionar aunque los turnos pertenezcan a recursos diferente
 
 ### Roles
 
-No se implementarán roles de participación en la primera versión. El programa trabajará con:
+La implementación actual permite asignar uno o varios roles configurables a cada participante. El rol `Capitan` habilita la pestaña de disponibilidad específica para Salidas de predicación y permite que la persona aparezca como candidata al asignar una salida.
+
+Los roles y estados que ya forman parte de la configuración inicial se consideran predeterminados del sistema. Sus nombres no se pueden cambiar ni eliminar; los roles predeterminados sí permiten editar únicamente su color. Los roles y estados agregados posteriormente permanecen editables y eliminables, sujetos a las validaciones de uso existentes.
+
+El programa de Predicación pública continúa trabajando con:
 
 ```text
 Fecha + Turno + Recurso + Participantes
 ```
+
+### Filtros y distribución
+
+El calendario de Predicación pública incluye un buscador de participantes y un panel de distribución colapsable. El panel muestra habilitados, con asignación y sin asignación, ordena por carga descendente y permite filtrar tocando una persona; tocar nuevamente la misma persona quita el filtro. En Salidas de predicación existe el equivalente para capitanes, con métricas de salidas, asignadas y sin capitán. Ambos paneles conservan la posición de scroll al actualizar el calendario y los buscadores manejan la composición de texto de Chrome para Android.
+
+Los participantes con rol `Regular` se identifican en el panel público mediante el color del rol en el borde izquierdo de la tarjeta y el tooltip `Precursor Regular`.
 
 ## Generación automática mensual
 
@@ -208,7 +226,11 @@ El sistema debe poder regenerar únicamente:
 - Editar.
 - Desactivar.
 - Tipo.
-- Disponibilidad.
+- Roles.
+- Disponibilidad de Predicación pública.
+- Disponibilidad de capitán, solo para personas con ese rol.
+- Notas.
+- Actividad filtrable por año y mes.
 - Número de asignaciones.
 
 ### 3. Disponibilidad
@@ -325,6 +347,8 @@ PDF debe incluir:
 - Participantes.
 - Formato apto para imprimir y compartir.
 
+En el MVP local actual, la salida tabular se descarga como CSV compatible con Excel y la salida visual se obtiene mediante impresión/PDF. La exportación PNG está disponible para Salidas de predicación.
+
 ## Estados del programa
 
 - Borrador.
@@ -332,6 +356,8 @@ PDF debe incluir:
 - Publicado.
 - Cerrado.
 - Archivado.
+
+En la implementación local actual, la revisión visual se refleja principalmente con `En edición`, `Revisado` y `Cambios sin revisar`; estos estados sustituyen por ahora al flujo completo de publicación multiusuario.
 
 La publicación debe mostrar advertencias si existen conflictos o turnos incompletos.
 
@@ -515,7 +541,7 @@ No agregar todavía:
 - Notificaciones.
 - Importación del Excel existente.
 - Algoritmo avanzado de optimización.
-- Roles complejos.
+- Roles avanzados fuera de los roles configurables actuales.
 - Aplicación móvil.
 
 Primero debe validarse que el flujo de disponibilidad, generación mensual, revisión manual y exportación sea cómodo y correcto.

@@ -64,9 +64,9 @@ La clave principal es `predicacion.mvp.v1`. `main.js` carga el objeto global `db
 
 Colecciones principales:
 
-- `participants`: personas, estado, etiquetas, frecuencia y relaciones.
-- `types`: etiquetas configurables.
-- `states`: estados de participante y si permiten programación.
+- `participants`: personas, estado, roles configurables, notas, frecuencia y relaciones.
+- `types`: roles asignables, con color, `isSystemDefault` y `systemKey` opcional.
+- `states`: estados de participante, si permiten programación y `isSystemDefault`.
 - `turns`: nombre, horario, días habilitados y estado activo.
 - `resources`: puntos, ubicación, mínimo/máximo y estado activo.
 - `availabilities`: relación participante-turno-día.
@@ -82,6 +82,8 @@ Colecciones principales:
 Cada escritura debe pasar por `save(action, detail)`. Esta función normaliza configuraciones, sincroniza estados de programa, registra el historial y serializa `db` en `localStorage`.
 
 Preferir cambios compatibles y normalizaciones idempotentes. Los datos existentes pueden venir de versiones anteriores y no deben romperse por agregar campos nuevos.
+
+Los roles y estados existentes se normalizan como predeterminados del sistema cuando todavía no tienen la marca `isSystemDefault`. Los roles predeterminados no se pueden renombrar ni eliminar, pero su color sí puede editarse; los estados predeterminados no se pueden editar ni eliminar. Los registros nuevos se crean con `isSystemDefault: false`. La protección debe existir tanto en la interfaz como en los manejadores de acciones para evitar que una acción invocada manualmente la omita. El rol `Regular` recibe `systemKey: 'precursor-regular'` para identificarlo sin depender únicamente del texto visible.
 
 ## 6. Modelo de programa y asignación
 
@@ -108,9 +110,19 @@ Los estados `Sin actividad` y `Otros planes` se almacenan como citas sin capitá
 
 Un capitán con conflicto de disponibilidad puede asignarse únicamente mediante una confirmación explícita como excepción consciente. La cita conserva el capitán seleccionado y se identifica con una tarjeta roja; el tooltip nombra al capitán y la asignación que genera el conflicto. La exportación PDF deja vacío el nombre del capitán para que la excepción no se publique como disponibilidad confirmada.
 
-`outreach.js` administra lugares, reglas de horario, programas mensuales, generación de citas, edición de asignaciones y conflictos en ambas direcciones. `outreach-pdf.js` genera la versión imprimible PDF y la imagen PNG del programa de salidas a partir de la misma hoja mensual.
+`outreach.js` administra lugares, reglas de horario, programas mensuales, generación de citas, edición de asignaciones y conflictos en ambas direcciones. `main.js` integra las reglas de disponibilidad de capitanes y la presentación del modal de edición con la ficha de participantes. `outreach-pdf.js` genera la versión imprimible PDF y la imagen PNG del programa de salidas a partir de la misma hoja mensual.
 
 El botón `Exportar` del programa de salidas ofrece PDF y PNG. El PDF conserva la vista de impresión; el PNG captura únicamente la hoja mensual, con resolución ampliada para compartirla como imagen. Ambos formatos filtran las citas pendientes o con advertencias no confirmadas y muestran las marcadas explícitamente como excepción o sin actividad según las reglas del módulo. Este flujo no modifica `pdf-export.js`, que pertenece a Predicación pública.
+
+La ficha de participante integra tres áreas operativas: información y disponibilidad de Predicación pública, notas libres y actividad. La actividad permite filtrar por año y mes, muestra estadísticas de asignaciones públicas y, cuando la persona tiene el rol `Capitan`, estadísticas de sus salidas. La pestaña de disponibilidad de capitán solo se agrega a participantes con ese rol y guarda la disponibilidad para cada horario puntual de `outreach.rules`.
+
+Al seleccionar un capitán para una salida, la validación combina la disponibilidad declarada para el día y horario con las colisiones contra Predicación pública y otras Salidas de predicación. Si no hay conflicto, no se muestra una advertencia ni una opción adicional; si existe conflicto, se muestra la advertencia y la confirmación `Guardar de todos modos`. Cuando una salida no tiene capitán, el buscador recibe foco y despliega las opciones automáticamente.
+
+El programa de Predicación pública incluye un panel de distribución con los conteos de participantes habilitados, con asignación y sin asignación. El texto `sin asignación` es intencional: identifica a personas habilitadas que no aparecen en las asignaciones del periodo.
+
+El panel público se ordena por carga descendente. Pulsar una persona filtra el calendario; pulsar nuevamente la misma persona activa quita el filtro. Las filas de participantes con el rol `Regular` conservan el color configurado para ese rol en un borde izquierdo y muestran el tooltip `Precursor Regular`, además de una descripción accesible. El color del borde identifica el rol y los colores de la barra inferior y del indicador circular continúan representando la carga.
+
+El panel de distribución de Salidas de predicación se puede mostrar u ocultar desde el control situado después del buscador. El botón usa `Ver Distribución` con tooltip `Ver distribución de capitanes` y, al abrirse, `Ocultar distribución`. Sus contadores permiten filtrar por todas las salidas, asignadas o sin capitán; sus capitanes se ordenan por carga descendente y pulsar nuevamente el capitán activo quita el filtro. La posición de scroll se conserva al seleccionar y al volver a renderizar el calendario.
 
 Las vistas de listado de ambos módulos presentan la tabla directamente bajo la cabecera contextual de la sección, sin un subtítulo redundante. Puntos y Turnos muestran el contexto `Predicación pública`; Lugares de encuentro y Horarios muestran `Salidas de predicación`; Roles y Estados muestran `Configuración`. Los menús de Predicación pública y Salidas de predicación comienzan desplegados. La tabla de programas de salidas incluye `Creado`, `Modificado` y `Salidas` para distinguir rápidamente programas del mismo mes.
 
@@ -123,6 +135,8 @@ Las vistas de listado de ambos módulos presentan la tabla directamente bajo la 
 ### Resolución y advertencias
 
 `assignmentIsResolved` determina si una tarjeta cumple el mínimo requerido. `warningReasonsForAssignment` detecta sobrecupo, participante inactivo, falta de habilitación para un punto, falta de disponibilidad y solapamientos. En Salidas de predicación, los datos faltantes se clasifican como `Pendientes` (naranja) y los conflictos o configuraciones inválidas como `Advertencias` (rojo).
+
+Para una salida, la disponibilidad del capitán se evalúa en este orden conceptual: el participante debe tener el rol `Capitan`, debe haber declarado disponibilidad para el horario puntual y no debe tener una colisión con Predicación pública ni con otra salida. Una excepción guardada conserva el conflicto para revisión; no convierte al capitán en disponible.
 
 `classifyProgramAssignments` divide las tarjetas en:
 
@@ -146,7 +160,7 @@ En la lista de programas, el chip azul `Nuevas asignaciones disponibles` indica 
 
 ## 8. Renderizado y eventos
 
-Las vistas se generan con `shell(html)`, que reemplaza `#app`, conecta botones con `data-action` y ejecuta mejoras posteriores. Las vistas principales son `dashboard`, `participants`, `types`, `states`, `turns`, `resources`, `availability`, `programs`, `openProgram` y las vistas de configuración/calendario de `outreach.js`.
+Las vistas se generan con `shell(html)`, que reemplaza `#app`, conecta botones con `data-action` y ejecuta mejoras posteriores. Las vistas principales son `dashboard`, `participants`, `types`, `states`, `turns`, `resources`, `availability`, `programs`, `openProgram` y las vistas de configuración/calendario de `outreach.js`. `participantDialog` compone las pestañas de información, disponibilidad de capitán, notas y actividad según el rol de la persona.
 
 Las tarjetas de programa tienen dos presentaciones: `calendarProgramMarkup` y `agendaProgramMarkup`. Ambas deben mantener los mismos estados, textos accesibles y atributos `data-program-id`/`data-assignment-id`.
 
@@ -167,6 +181,11 @@ Para acciones nuevas:
 - Conservar `title`, `aria-label`, `aria-pressed` y estados de foco para controles interactivos.
 - En modo oscuro, validar contraste de texto, bordes y estados hover.
 - Las tarjetas de asignación deben conservar su affordance de edición y no mostrar botones contradictorios con el estado.
+- La ficha de participante debe ocultar la disponibilidad de capitán para personas sin ese rol y mostrar las estadísticas de capitán solo cuando correspondan.
+- La confirmación para guardar una asignación incompatible solo debe existir cuando hay conflicto; una asignación compatible no necesita un mensaje de disponibilidad positivo.
+- Los buscadores con autocompletado deben manejar `compositionstart`/`compositionend` y una cola con `requestAnimationFrame` para no duplicar caracteres en Chrome para Android; los listeners deben asignarse de forma idempotente.
+- Al cerrar una lista de autocompletado se debe detectar un `pointerdown` fuera de su contenedor.
+- Las insignias de protección y los indicadores de Precursor Regular deben conservar tooltip y descripción accesible; el color del rol no debe confundirse con los colores de carga.
 - Los calendarios conservan visible el contexto de mes, semana y día durante el scroll mediante encabezados sticky.
 - El modal de edición de salidas muestra la fecha completa y el horario asociado (`día, fecha - nombre del horario - hora`).
 - La tabla de participantes mantiene sticky la fila de resultados, los nombres de columnas y los filtros. El resumen informa el total, los resultados mostrados y los filtros activos.
@@ -187,4 +206,4 @@ Para acciones nuevas:
 3. Mantener la identidad estructural `date|turnId|resourceId` al comparar programas.
 4. Registrar cambios persistentes mediante `save`.
 5. Ejecutar `node --check app/main.js`, `node --check app/outreach.js` y `node --check app/outreach-pdf.js` después de modificar esos archivos.
-6. Probar ambas vistas (`Calendario` y `Agenda`), el calendario de salidas, la tabla de participantes y ambos temas antes de entregar cambios.
+6. Probar ambas vistas (`Calendario` y `Agenda`), el calendario de salidas, la tabla y ficha de participantes, los filtros de actividad, la disponibilidad de capitanes y ambos temas antes de entregar cambios.
