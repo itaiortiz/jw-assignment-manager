@@ -826,6 +826,29 @@ function coupleCoverageMessage(status){
   return parts.join(' · ');
 }
 
+function consecutiveAssignmentWarning(participantId,assignment,program){
+  if(!participantId||!assignment?.date||!program)return null;
+  const assignedDates=[...new Set((program.assignments||[])
+    .filter(item=>item.participantIds?.includes(participantId))
+    .map(item=>item.date))].sort();
+  if(!assignedDates.includes(assignment.date))assignedDates.push(assignment.date);
+  const dateSet=new Set(assignedDates),current=calendarDate(assignment.date);
+  const adjacentDate=offset=>calendarLocalIso(new Date(current.getFullYear(),current.getMonth(),current.getDate()+offset,12));
+  const previous=adjacentDate(-1),next=adjacentDate(1);
+  if(!dateSet.has(previous)&&!dateSet.has(next))return null;
+  let first=calendarDate(assignment.date),last=calendarDate(assignment.date);
+  while(dateSet.has(calendarLocalIso(new Date(first.getFullYear(),first.getMonth(),first.getDate()-1,12))))first=new Date(first.getFullYear(),first.getMonth(),first.getDate()-1,12);
+  while(dateSet.has(calendarLocalIso(new Date(last.getFullYear(),last.getMonth(),last.getDate()+1,12))))last=new Date(last.getFullYear(),last.getMonth(),last.getDate()+1,12);
+  const days=Math.round((last-first)/86400000)+1,format=date=>date.toLocaleDateString('es-MX',{day:'numeric',month:'long'});
+  const neighbor=dateSet.has(previous)?calendarDate(previous):calendarDate(next);
+  return {
+    days,
+    message:days===2
+      ?`Tiene otra asignación el ${format(neighbor)}: dos días seguidos.`
+      :`Tiene una racha de ${days} días seguidos (${format(first)} al ${format(last)}).`
+  };
+}
+
 availableForAssignment=(participantId,assignment,program)=>coupleAssignmentEligibility(participantId,assignment,program).allowed;
 assignmentWarningReason=(person,assignment,program)=>coupleAssignmentEligibility(person?.id,assignment,program).reason||'';
 warningReasonsForAssignment=(program,assignment)=>{
@@ -974,9 +997,9 @@ assignmentDialog=function(programId,assignmentId){
     const term=normalizeText(search.value),visible=candidates.filter(person=>!selection.has(person.id)&&normalizeText(person.name).includes(term)&&(!onlyAvailable.checked||statusFor(person).allowed)),over=selection.size>maximum;
     closeNote();
     selectedBox.classList.toggle('manager-overcapacity',over);
-    selectedBox.innerHTML=[...selection].map(id=>{const person=db.participants.find(item=>item.id===id);if(!person)return '';const status=statusFor(person),message=status.reason||coupleCoverageMessage(status);return `<div class="manager-person ${status.allowed?'':'manager-exception'}" data-remove-row="${person.id}" tabindex="0" aria-label="Quitar ${esc(person.name)}" ${message?`title="${esc(message)}"`:''}>${participantAvatar(person)}<span>${esc(person.name)}${spouseMark(person)}${coverageMarkup(status)}</span>${noteMarkup(person)}<button type="button" class="manager-remove-button" data-remove="${person.id}" aria-label="Quitar ${esc(person.name)}" title="Quitar ${esc(person.name)}">−</button></div>`;}).join('')||'<p class="muted">Aún no hay participantes asignados.</p>';
+    selectedBox.innerHTML=[...selection].map(id=>{const person=db.participants.find(item=>item.id===id);if(!person)return '';const status=statusFor(person),consecutive=consecutiveAssignmentWarning(person.id,draft(),program),message=[status.reason,coupleCoverageMessage(status),consecutive?.message].filter(Boolean).join(' · ');return `<div class="manager-person ${status.allowed?'':'manager-exception'} ${consecutive&&status.allowed?'manager-consecutive-warning':''}" data-remove-row="${person.id}" tabindex="0" aria-label="Quitar ${esc(person.name)}" ${message?`title="${esc(message)}"`:''}>${participantAvatar(person)}<span>${esc(person.name)}${spouseMark(person)}${coverageMarkup(status)}</span>${noteMarkup(person)}<button type="button" class="manager-remove-button" data-remove="${person.id}" aria-label="Quitar ${esc(person.name)}" title="Quitar ${esc(person.name)}">−</button></div>`;}).join('')||'<p class="muted">Aún no hay participantes asignados.</p>';
     if(over)selectedBox.insertAdjacentHTML('afterbegin',`<p class="capacity-alert">Sobrecupo: ${selection.size}/${maximum} participantes.</p>`);
-    candidateBox.innerHTML=visible.map(person=>{const status=statusFor(person),message=status.reason||coupleCoverageMessage(status);return `<div class="manager-candidate ${status.allowed?'':'manager-exception'}" data-add-row="${person.id}" tabindex="0" aria-label="Agregar ${esc(person.name)}" ${message?`title="${esc(message)}"`:''}>${participantAvatar(person)}<span>${esc(person.name)}${spouseMark(person)}${coverageMarkup(status)}</span>${noteMarkup(person)}<button type="button" class="manager-add-button" data-add="${person.id}" aria-label="Agregar ${esc(person.name)}">+</button></div>`;}).join('')||`<p class="muted">${onlyAvailable.checked?'No hay participantes disponibles que coincidan.':'No hay participantes que coincidan.'}</p>`;
+    candidateBox.innerHTML=visible.map(person=>{const status=statusFor(person),consecutive=consecutiveAssignmentWarning(person.id,draft(),program),message=[status.reason,coupleCoverageMessage(status),consecutive?.message].filter(Boolean).join(' · ');return `<div class="manager-candidate ${status.allowed?'':'manager-exception'} ${consecutive&&status.allowed?'manager-consecutive-warning':''}" data-add-row="${person.id}" tabindex="0" aria-label="Agregar ${esc(person.name)}" ${message?`title="${esc(message)}"`:''}>${participantAvatar(person)}<span>${esc(person.name)}${spouseMark(person)}${coverageMarkup(status)}</span>${noteMarkup(person)}<button type="button" class="manager-add-button" data-add="${person.id}" aria-label="Agregar ${esc(person.name)}">+</button></div>`;}).join('')||`<p class="muted">${onlyAvailable.checked?'No hay participantes disponibles que coincidan.':'No hay participantes que coincidan.'}</p>`;
     bindNoteTriggers();
     el.querySelectorAll('[data-remove]').forEach(button=>button.onclick=()=>{selection.delete(button.dataset.remove);warning.hidden=true;paint()});
     el.querySelectorAll('[data-add]').forEach(button=>button.onclick=()=>{selection.add(button.dataset.add);warning.hidden=true;paint()});
@@ -1011,6 +1034,42 @@ enhanceAssignmentEditors=function(){
       const mark=document.createElement('span');mark.className='joint-coverage-mark';mark.textContent='↔';mark.title=message;mark.setAttribute('aria-label',message);
       chip.insertBefore(mark,chip.querySelector('[data-person-id]')||chip.lastChild);
       chip.title=message;
+    });
+  });
+};
+
+const enhanceAssignmentEditorsBeforeConsecutiveWarnings=enhanceAssignmentEditors;
+enhanceAssignmentEditors=function(){
+  enhanceAssignmentEditorsBeforeConsecutiveWarnings();
+  document.querySelectorAll('.program-slot[data-program-id][data-assignment-id]').forEach(slot=>{
+    const program=db.programs.find(item=>item.id===slot.dataset.programId),assignment=program?.assignments.find(item=>item.id===slot.dataset.assignmentId);
+    if(!program||!assignment)return;
+    const warnings=(assignment.participantIds||[]).map(participantId=>{
+      const person=db.participants.find(item=>item.id===participantId),warning=consecutiveAssignmentWarning(participantId,assignment,program);
+      return person&&warning?`${person.name}: ${warning.message}`:'';
+    }).filter(Boolean);
+    const message=warnings.join(' · ');
+    slot.classList.toggle('slot-consecutive-warning',!!message);
+    slot.querySelector('.slot-consecutive-warning-badge')?.remove();
+    if(message){
+      const prior=slot.dataset.consecutiveWarningMessage;
+      slot.title=prior&&slot.title.includes(prior)?slot.title.replace(prior,message):slot.title&&slot.title!==message?[slot.title,message].join(' · '):message;
+      slot.dataset.consecutiveWarningMessage=message;
+    }
+    slot.querySelectorAll('.assigned-chip').forEach((chip,index)=>{
+      const personId=assignment.participantIds?.[index],warning=consecutiveAssignmentWarning(personId,assignment,program);
+      chip.querySelector('.consecutive-assignment-mark')?.remove();
+      chip.classList.toggle('assignment-consecutive-warning',!!warning);
+      if(!warning)return;
+      const prior=chip.dataset.consecutiveWarningMessage;
+      chip.title=prior&&chip.title.includes(prior)?chip.title.replace(prior,warning.message):[chip.title,warning.message].filter(Boolean).join(' · ');
+      chip.dataset.consecutiveWarningMessage=warning.message;
+      const nameButton=chip.querySelector('.calendar-participant-name,.agenda-participant-name');
+      if(nameButton){
+        const priorNameMessage=nameButton.dataset.consecutiveWarningMessage;
+        nameButton.title=priorNameMessage&&nameButton.title.includes(priorNameMessage)?nameButton.title.replace(priorNameMessage,warning.message):[nameButton.title,warning.message].filter(Boolean).join(' · ');
+        nameButton.dataset.consecutiveWarningMessage=warning.message;
+      }
     });
   });
 };

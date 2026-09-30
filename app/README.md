@@ -18,6 +18,7 @@ La aplicación funciona sin internet y guarda los datos en el almacenamiento loc
 - Cobertura conjunta opcional por cónyuges: al asignarlos juntos al mismo punto y horario, pueden compartir disponibilidad de horario y/o habilitación de puntos sin modificar sus registros individuales; el PDF conserva la presentación normal de nombres.
 - Editor de asignaciones con filas completas para agregar o quitar participantes, iconos `+`/`−`, estado hover uniforme y motivos de no disponibilidad disponibles mediante tooltip.
 - Icono discreto de nota para participantes con notas; muestra la nota completa al pasar el cursor, enfocarlo o tocarlo, sin modificar la asignación.
+- Advertencia ámbar informativa cuando una persona queda asignada en días consecutivos; se muestra en las tarjetas y en el editor con el detalle mediante tooltip, sin bloquear la asignación ni cambiar el PDF.
 - Disponibilidad de capitán por cada horario puntual configurado en Salidas de predicación.
 - Generación mensual automática como borrador, con mínimo de dos personas y distribución por carga.
 - Edición manual protegida y regeneración de espacios no protegidos.

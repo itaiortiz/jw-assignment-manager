@@ -236,6 +236,15 @@ html[data-theme="dark"] button.program-summary-card.summary-pending.has-items,ht
 html[data-theme="dark"] button.program-summary-card.summary-warning.has-items,html[data-theme="dark"] button.program-summary-card.summary-warning.has-items:hover,html[data-theme="dark"] button.program-summary-card.summary-warning.has-items.active{background:#5a3032;color:#ffd9d7;border-color:#c87573}
 html[data-theme="dark"] .slot-warning{background:#5a3032!important;border-left-color:#c87573!important}html[data-theme="dark"] .slot-warning .slot-status,html[data-theme="dark"] .slot-status.warning{background:#5a3032!important;color:#ffd9d7!important}html[data-theme="dark"] .day-status.warning{background:#5a3032;color:#ffd9d7}
 
+/* Advertencia informativa: dos o más días seguidos no invalidan la asignación. */
+.program-slot.slot-consecutive-warning:not(.slot-warning):not(.slot-unavailable){border-left-color:#d79a1a!important}
+.assigned-people .assigned-chip.assignment-consecutive-warning{background:#fff7df!important;color:#845200!important;border:1px solid #e8bd58}
+.assigned-people .assigned-chip.assignment-consecutive-warning .calendar-participant-name,.assigned-people .assigned-chip.assignment-consecutive-warning .agenda-participant-name{color:inherit!important}
+.manager-person.manager-consecutive-warning>span:not(.participant-avatar),.manager-candidate.manager-consecutive-warning>span:not(.participant-avatar){color:#8a5700!important}
+html[data-theme="dark"] .program-slot.slot-consecutive-warning:not(.slot-warning):not(.slot-unavailable){border-left-color:#e7b74a!important}
+html[data-theme="dark"] .assigned-people .assigned-chip.assignment-consecutive-warning{background:#514019!important;color:#ffdc85!important;border-color:#b98a2e}
+html[data-theme="dark"] .manager-person.manager-consecutive-warning>span:not(.participant-avatar),html[data-theme="dark"] .manager-candidate.manager-consecutive-warning>span:not(.participant-avatar){color:#ffdc85!important}
+
 /* Las opciones de días también pertenecen al formulario modal. En oscuro
    deben conservar el mismo contraste que el resto de sus controles. */
 html[data-theme="dark"] .checkgrid label{background:#203743;color:#e5edf3;border:1px solid #405769}

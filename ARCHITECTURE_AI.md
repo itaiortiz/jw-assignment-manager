@@ -140,6 +140,8 @@ La disponibilidad y los puntos elegibles se registran individualmente. Una parej
 
 El editor de una asignación muestra un icono de nota solo cuando el participante tiene notas en su ficha. Al pasar el cursor, enfocarlo o pulsarlo se abre una tarjeta con la nota completa; la tarjeta se mantiene dentro de los límites del modal y se posiciona al lado con espacio disponible. Las filas de asignados y candidatos son interactivas en toda su superficie: pulsarlas quita o agrega a la persona, mientras los iconos de nota y `+`/`−` conservan su propia acción. Las personas no disponibles se distinguen por color y el motivo se conserva en el tooltip, sin texto adicional dentro de la fila.
 
+`consecutiveAssignmentWarning` detecta, dentro del mismo programa, si una persona participa tanto en la fecha actual como en el día anterior o posterior. Es una señal preventiva ámbar: marca el nombre y la tarjeta, explica la pareja o racha de días en el tooltip y no entra en `warningReasonsForAssignment`, validación, generación ni exportación PDF.
+
 Para una salida, la disponibilidad del capitán se evalúa en este orden conceptual: el participante debe tener el rol `Capitan`, debe haber declarado disponibilidad para el horario puntual y no debe tener una colisión con Predicación pública ni con otra salida. Una excepción guardada conserva el conflicto para revisión; no convierte al capitán en disponible.
 
 `classifyProgramAssignments` divide las tarjetas en:
