@@ -31,6 +31,8 @@ La ficha de participantes comparte los capitanes disponibles con el módulo de s
 
 El programa de Predicación pública también cuenta con un panel de distribución que resume participantes habilitados, con asignación y sin asignación, y permite filtrar por participante.
 
+La evolución de exportación de Predicación pública se mantiene independiente de este módulo: ofrece PDF original, PDF compacto y PNG por semana. El PDF compacto aplica el color configurable de cada turno y las imágenes incluyen pie paginado; esto no modifica la hoja mensual ni las reglas de exportación de Salidas de predicación.
+
 El programa de Salidas de predicación cuenta con un panel de distribución de capitanes colapsable. El botón aparece después del buscador, usa la etiqueta `Ver Distribución`, el tooltip `Ver distribución de capitanes` y cambia a `Ocultar distribución` cuando está abierto. El panel muestra salidas, asignadas y sin capitán; los capitanes se ordenan por carga descendente, tocar un capitán filtra el calendario y tocar nuevamente el mismo capitán quita el filtro. El scroll se conserva al seleccionar un capitán o al actualizar el calendario.
 
 El buscador de capitanes permite seleccionar varios filtros mediante chips. Sus resultados se cierran al pulsar fuera del control y el manejo de composición evita que Chrome en Android duplique las letras escritas.

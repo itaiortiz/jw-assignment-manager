@@ -4,7 +4,7 @@
 
 Desde esta carpeta, ejecutar `npm start` y abrir `http://localhost:5173`.
 
-La aplicación funciona sin internet y guarda los datos en el almacenamiento local del navegador. `Respaldar` descarga un JSON restaurable. La exportación CSV puede abrirse en Excel y `Exportar PDF` abre una vista limpia lista para guardar con el diálogo de impresión de Windows. El módulo de Salidas de predicación ofrece un menú `Exportar` con las opciones PDF y PNG; ambos formatos usan la misma vista mensual de una sola hoja. El PNG conserva la tipografía sans-serif y el estilo visual del calendario, y se genera en alta resolución para compartirlo o imprimirlo.
+La aplicación funciona sin internet y guarda los datos en el almacenamiento local del navegador. `Respaldar` descarga un JSON restaurable. La exportación CSV puede abrirse en Excel. En Predicación pública, `Exportar PDF` permite elegir el formato original, una versión compacta optimizada para lectura o una imagen PNG por semana; esta última está pensada para compartir por WhatsApp. El módulo de Salidas de predicación ofrece un menú `Exportar` con las opciones PDF y PNG; ambos formatos usan la misma vista mensual de una sola hoja. El PNG conserva la tipografía sans-serif y el estilo visual del calendario, y se genera en alta resolución para compartirlo o imprimirlo.
 
 ## Alcance implementado
 
@@ -13,7 +13,7 @@ La aplicación funciona sin internet y guarda los datos en el almacenamiento loc
 - Actividad consultable por año y mes, con participación en Predicación pública y estadísticas de servicio como capitán cuando corresponde.
 - Roles predeterminados protegidos: su nombre no se puede cambiar, los roles permiten editar únicamente el color y no se pueden eliminar; los roles adicionales sí son configurables.
 - Estados predeterminados protegidos contra edición y eliminación; los estados adicionales sí son configurables.
-- Turnos y puntos configurables, editables y eliminables cuando no tienen historial asociado.
+- Turnos y puntos configurables, editables y eliminables cuando no tienen historial asociado; cada turno tiene un color configurable que se usa en sus etiquetas de exportación.
 - Disponibilidad pública por día y turno, editable desde la ficha o desde su pantalla.
 - Cobertura conjunta opcional por cónyuges: al asignarlos juntos al mismo punto y horario, pueden compartir disponibilidad de horario y/o habilitación de puntos sin modificar sus registros individuales; el PDF conserva la presentación normal de nombres.
 - Editor de asignaciones con filas completas para agregar o quitar participantes, iconos `+`/`−`, estado hover uniforme y motivos de no disponibilidad disponibles mediante tooltip.
@@ -30,6 +30,7 @@ La aplicación funciona sin internet y guarda los datos en el almacenamiento loc
 - Estados `Sin actividad` y `Otros planes` para salidas, con razón predeterminada cuando no se captura texto adicional.
 - Calendarios con referencia persistente al mes, semana y día; encabezados sticky para conservar el contexto durante el scroll.
 - Panel de distribución de Predicación pública con los conteos `habilitados`, `con asignación` y `sin asignación`, filtrado por participante y orden descendente por carga.
+- Panel de distribución con búsqueda inmediata y filtros locales `Todos`, `Regulares` y `sin asignación`; los filtros se combinan con el texto buscado sin modificar el programa.
 - Panel de distribución de Salidas de predicación con conteos de salidas, asignaciones y salidas sin capitán; ambos paneles son colapsables, conservan el scroll y permiten quitar el filtro al pulsar nuevamente la misma persona.
 - Los Precursores Regulares se distinguen con el color del rol en el borde izquierdo de su tarjeta y el tooltip `Precursor Regular`.
 - Los buscadores con autocompletado protegen la composición de texto en Android y cierran sus resultados al pulsar fuera del control.
@@ -37,5 +38,6 @@ La aplicación funciona sin internet y guarda los datos en el almacenamiento loc
 - Tabla de participantes con encabezados y filtros sticky, además de un resumen dinámico del total, resultados mostrados y filtros activos.
 - Tarjetas de calendario con indicadores visuales por estado: completada, pendiente, requiere atención, no disponible o sin actividad.
 - Exportación mensual de Salidas de predicación en PDF o PNG; solo se incluyen salidas válidas, sin pendientes ni advertencias no confirmadas. La imagen PNG aplica explícitamente la tipografía del calendario al documento exportado para evitar sustituciones de fuente del navegador.
+- Exportación de Predicación pública con selector de PDF original, PDF compacto y PNG semanal. El formato compacto usa filas alternas, ubicación con pin monocromático, una cuadrícula de nombres de dos columnas, el color configurado para el turno y una semana por página; los PNG incluyen encabezado principal en la primera imagen y pie paginado en todas.
 
 La siguiente evolución recomendada es sustituir el adaptador de `localStorage` por repositorios SQLite y migrar la interfaz a React/Tauri sin mover las reglas de generación y validación.

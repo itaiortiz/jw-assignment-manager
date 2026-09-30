@@ -314,3 +314,13 @@ html[data-theme="dark"] .public-participant-search input{border-color:#38657c;ba
 .system-default-lock{display:inline-flex;margin-left:7px;vertical-align:middle;font-size:.82rem;cursor:help}.system-default-action{color:#637482;font-size:.8rem;font-weight:700;white-space:nowrap}
 html[data-theme="dark"] .system-default-action{color:#b7c8d3}
 html[data-theme="dark"] .public-distribution-row.is-precursor-regular,html[data-theme="dark"] .public-distribution-row.is-precursor-regular:hover,html[data-theme="dark"] .public-distribution-row.is-precursor-regular:focus-visible,html[data-theme="dark"] .public-distribution-row.is-precursor-regular.active{border-left-color:var(--precursor-regular-color)}
+
+/* Filtros y búsqueda dentro del panel de distribución. */
+.public-distribution-panel{grid-template-rows:auto auto minmax(0,1fr)}
+.public-distribution-row.distribution-filtered-out,.public-distribution-row[hidden],.public-distribution-empty[hidden]{display:none!important}
+.public-distribution-metrics button{display:grid;gap:2px;padding:10px 6px;border:0;background:transparent;color:#557082;font:700 .7rem Arial,Helvetica,sans-serif;text-align:center;cursor:pointer}
+.public-distribution-metrics button+button{border-left:1px solid #dbe8ee}
+.public-distribution-metrics button:hover,.public-distribution-metrics button:focus-visible,.public-distribution-metrics button.active{background:#eaf6fc;color:#1769aa;outline:0}
+.public-distribution-metrics button:nth-child(2) strong{color:#268158}.public-distribution-metrics button:nth-child(3) strong{color:#657782}
+.public-distribution-search{display:grid;gap:5px;color:#557082;font-size:.76rem;font-weight:750}.public-distribution-search input{width:100%;min-height:34px;padding:7px 9px;border:1px solid #b9d2e1;border-radius:7px;background:#fff;color:#234b64;font:inherit}.public-distribution-search input:focus{border-color:#2587bb;outline:2px solid #2587bb2e}
+html[data-theme="dark"] .public-distribution-metrics button{color:#b7c8d3;border-color:#304354}html[data-theme="dark"] .public-distribution-metrics button:hover,html[data-theme="dark"] .public-distribution-metrics button:focus-visible,html[data-theme="dark"] .public-distribution-metrics button.active{background:#203e4e;color:#83cef4}html[data-theme="dark"] .public-distribution-metrics button:nth-child(2) strong{color:#80e5aa}html[data-theme="dark"] .public-distribution-metrics button:nth-child(3) strong{color:#b7c8d3}html[data-theme="dark"] .public-distribution-search{color:#b7c8d3}html[data-theme="dark"] .public-distribution-search input{border-color:#38657c;background:#172630;color:#d7e8f2}

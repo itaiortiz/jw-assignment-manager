@@ -35,7 +35,7 @@ npm start
 │  ├─ overrides.css           # Ajustes visuales transversales
 │  ├─ tag-overrides.css       # Ajustes para etiquetas y colores
 │  ├─ report-import.js        # Datos estáticos usados por la importación inicial
-│  └─ pdf-export.js           # Exportación/maquetación para impresión PDF
+│  └─ pdf-export.js           # Exportación PDF y PNG semanal de Predicación pública
 ├─ construir_programa.mjs     # Utilidad auxiliar fuera del runtime de la app
 ├─ crear_informe_participantes.mjs
 ├─ plan_mvp_programa_predicacion.md
@@ -67,7 +67,7 @@ Colecciones principales:
 - `participants`: personas, estado, roles configurables, notas, frecuencia y relaciones.
 - `types`: roles asignables, con color, `isSystemDefault` y `systemKey` opcional.
 - `states`: estados de participante, si permiten programación y `isSystemDefault`.
-- `turns`: nombre, horario, días habilitados y estado activo.
+- `turns`: nombre, horario, color de etiqueta, días habilitados y estado activo.
 - `resources`: puntos, ubicación, mínimo/máximo y estado activo.
 - `availabilities`: relación participante-turno-día.
 - `participantResources`: puntos habilitados por participante.
@@ -114,6 +114,8 @@ Un capitán con conflicto de disponibilidad puede asignarse únicamente mediante
 
 El botón `Exportar` del programa de salidas ofrece PDF y PNG. El PDF conserva la vista de impresión; el PNG captura únicamente la hoja mensual, con resolución ampliada para compartirla como imagen. Ambos formatos filtran las citas pendientes o con advertencias no confirmadas y muestran las marcadas explícitamente como excepción o sin actividad según las reglas del módulo. Este flujo no modifica `pdf-export.js`, que pertenece a Predicación pública.
 
+En Predicación pública, `publicPdfFormatDialog` permite elegir entre el PDF original (Formato 1), el PDF compacto (Formato 2) y una imagen PNG por semana. `pdf-export.js` conserva el primer formato y compone el segundo con bandas semanales, encabezados de día, filas alternas, una cuadrícula de nombres de dos columnas y un pin de ubicación dibujado por CSS. El color de cada etiqueta de horario proviene de `turn.color`, configurable desde Turnos, con valores de respaldo para datos antiguos. Las semanas del PDF compacto no se dividen entre páginas: cada semana posterior a la primera inicia en una página nueva. La exportación PNG reutiliza esa maqueta, usa Arial/Helvetica para evitar sustituciones serif, incorpora el encabezado principal solo en la primera imagen y añade en todas un pie con congregación y `Página N de X`.
+
 La ficha de participante integra tres áreas operativas: información y disponibilidad de Predicación pública, notas libres y actividad. La actividad permite filtrar por año y mes, muestra estadísticas de asignaciones públicas y, cuando la persona tiene el rol `Capitan`, estadísticas de sus salidas. La pestaña de disponibilidad de capitán solo se agrega a participantes con ese rol y guarda la disponibilidad para cada horario puntual de `outreach.rules`.
 
 Al seleccionar un capitán para una salida, la validación combina la disponibilidad declarada para el día y horario con las colisiones contra Predicación pública y otras Salidas de predicación. Si no hay conflicto, no se muestra una advertencia ni una opción adicional; si existe conflicto, se muestra la advertencia y la confirmación `Guardar de todos modos`. Cuando una salida no tiene capitán, el buscador recibe foco y despliega las opciones automáticamente.
@@ -121,6 +123,8 @@ Al seleccionar un capitán para una salida, la validación combina la disponibil
 El programa de Predicación pública incluye un panel de distribución con los conteos de participantes habilitados, con asignación y sin asignación. El texto `sin asignación` es intencional: identifica a personas habilitadas que no aparecen en las asignaciones del periodo.
 
 El panel público se ordena por carga descendente. Pulsar una persona filtra el calendario; pulsar nuevamente la misma persona activa quita el filtro. Las filas de participantes con el rol `Regular` conservan el color configurado para ese rol en un borde izquierdo y muestran el tooltip `Precursor Regular`, además de una descripción accesible. El color del borde identifica el rol y los colores de la barra inferior y del indicador circular continúan representando la carga.
+
+El panel de distribución pública incluye filtros locales `Todos`, `Regulares` y `sin asignación`, además de búsqueda por nombre. Estos controles solo reducen las filas visibles del panel y se combinan entre sí; pulsar una fila continúa siendo la acción que filtra el calendario por esa persona.
 
 El panel de distribución de Salidas de predicación se puede mostrar u ocultar desde el control situado después del buscador. El botón usa `Ver Distribución` con tooltip `Ver distribución de capitanes` y, al abrirse, `Ocultar distribución`. Sus contadores permiten filtrar por todas las salidas, asignadas o sin capitán; sus capitanes se ordenan por carga descendente y pulsar nuevamente el capitán activo quita el filtro. La posición de scroll se conserva al seleccionar y al volver a renderizar el calendario.
 

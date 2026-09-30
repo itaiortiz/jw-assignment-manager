@@ -77,6 +77,7 @@ Cada turno deberá contener:
 - Hora final.
 - Estado activo/inactivo.
 - Días permitidos, opcionalmente.
+- Color configurable para identificarlo en la exportación.
 - Observaciones.
 
 ### Disponibilidad de Predicación pública
@@ -251,6 +252,7 @@ También debe permitir bloquear una fecha específica.
 - Definir hora inicial.
 - Definir hora final.
 - Definir días permitidos.
+- Configurar el color de la etiqueta de exportación.
 
 ### 5. Recursos
 
@@ -347,7 +349,7 @@ PDF debe incluir:
 - Participantes.
 - Formato apto para imprimir y compartir.
 
-En el MVP local actual, la salida tabular se descarga como CSV compatible con Excel y la salida visual se obtiene mediante impresión/PDF. La exportación PNG está disponible para Salidas de predicación.
+En el MVP local actual, la salida tabular se descarga como CSV compatible con Excel. Para Predicación pública, el selector de exportación ofrece el PDF original, un PDF compacto de lectura rápida y una imagen PNG por semana. El formato compacto utiliza el color configurable del turno, conserva cada semana completa en una página y los PNG incluyen encabezado principal en la primera imagen y pie con paginación en todas. La exportación PNG mensual también está disponible para Salidas de predicación.
 
 ## Estados del programa
 
@@ -492,6 +494,7 @@ Incluir:
 
 - Excel.
 - PDF.
+- Selector de formato: PDF original, PDF compacto y PNG por semana para Predicación pública.
 - Vista previa.
 - Revisión visual.
 - Impresión.
