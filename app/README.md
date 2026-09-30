@@ -15,6 +15,9 @@ La aplicación funciona sin internet y guarda los datos en el almacenamiento loc
 - Estados predeterminados protegidos contra edición y eliminación; los estados adicionales sí son configurables.
 - Turnos y puntos configurables, editables y eliminables cuando no tienen historial asociado.
 - Disponibilidad pública por día y turno, editable desde la ficha o desde su pantalla.
+- Cobertura conjunta opcional por cónyuges: al asignarlos juntos al mismo punto y horario, pueden compartir disponibilidad de horario y/o habilitación de puntos sin modificar sus registros individuales; el PDF conserva la presentación normal de nombres.
+- Editor de asignaciones con filas completas para agregar o quitar participantes, iconos `+`/`−`, estado hover uniforme y motivos de no disponibilidad disponibles mediante tooltip.
+- Icono discreto de nota para participantes con notas; muestra la nota completa al pasar el cursor, enfocarlo o tocarlo, sin modificar la asignación.
 - Disponibilidad de capitán por cada horario puntual configurado en Salidas de predicación.
 - Generación mensual automática como borrador, con mínimo de dos personas y distribución por carga.
 - Edición manual protegida y regeneración de espacios no protegidos.

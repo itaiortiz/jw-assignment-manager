@@ -213,7 +213,7 @@ const legacyEnhanceAssignmentEditors=enhanceAssignmentEditors;
 enhanceAssignmentEditors=function(){legacyEnhanceAssignmentEditors();document.querySelectorAll('.program-slot').forEach(slot=>{const manager=slot.querySelector('[data-aid]'),program=db.programs.find(item=>item.id===manager?.dataset.pid),assignment=program?.assignments.find(item=>item.id===manager?.dataset.aid);if(!assignment)return;const resource=db.resources.find(item=>item.id===assignment.resourceId),minimum=minimumForResource(resource),maximum=maximumForResource(resource),count=assignment.participantIds.length,over=count>maximum;slot.classList.toggle('slot-overcapacity',over);const minimumText=slot.querySelector('.slot-minimum');if(minimumText)minimumText.textContent=`Mínimo: ${minimum} · Máximo: ${maximum} participante${maximum===1?'':'s'}`;let capacity=slot.querySelector('.slot-capacity');if(!capacity){capacity=document.createElement('p');capacity.className='slot-capacity';minimumText?.after(capacity)}capacity.textContent=over?`Sobrecupo: ${count}/${maximum} participantes`:`Asignados: ${count}/${maximum}`;const status=slot.querySelector('.slot-status');if(over){status.textContent=`Sobrecupo +${count-maximum}`;status.classList.add('overcapacity')}slot.querySelectorAll('.assigned-chip').forEach(chip=>{const removeButton=chip.querySelector('[data-person-id]'),person=db.participants.find(item=>item.id===removeButton?.dataset.personId);if(person&&!chip.querySelector('.gender-mark')){chip.insertAdjacentHTML('afterbegin',genderMark(person));removeButton?.insertAdjacentHTML('beforebegin',spouseMark(person))}})})}
 assignmentDialog=function(programId,assignmentId){const program=db.programs.find(item=>item.id===programId),assignment=program?.assignments.find(item=>item.id===assignmentId);if(!program||!assignment)return;const resource=db.resources.find(item=>item.id===assignment.resourceId),turn=db.turns.find(item=>item.id===assignment.turnId),maximum=maximumForResource(resource),selection=new Set(assignment.participantIds),candidates=db.participants.filter(person=>person.active).sort((a,b)=>a.name.localeCompare(b.name,'es')),el=document.querySelector('#modal');el.classList.remove('compact-form-modal');el.innerHTML=`<section class="modal assignment-manager"><div class="toolbar"><div><span class="eyebrow">${esc(assignment.date)} · ${esc(turn?.name||'Turno')}</span><h2>${esc(resource?.name||'Punto')}</h2></div><button type="button" class="icon-button" data-close>×</button></div><p class="muted">Las excepciones de disponibilidad y sobrecupo se señalan antes de guardar.</p><div class="assignment-manager-grid"><section><h3>Participantes asignados</h3><div class="manager-selected"></div></section><section><label class="availability-filter"><input type="checkbox" checked data-only-available><span>Mostrar solo participantes con disponibilidad</span></label><label>Buscar participante<input class="manager-search" type="search" placeholder="Escribe un nombre"></label><div class="manager-candidates"></div></section></div><div class="assignment-warning" hidden></div><div class="modal-actions"><button type="button" data-close>Cancelar</button><button type="button" class="primary" data-save>Guardar cambios</button></div></section>`;const selectedBox=el.querySelector('.manager-selected'),candidateBox=el.querySelector('.manager-candidates'),search=el.querySelector('.manager-search'),onlyAvailable=el.querySelector('[data-only-available]'),warning=el.querySelector('.assignment-warning'),available=person=>availableForAssignment(person.id,assignment,program);const paint=()=>{const term=normalizeText(search.value),visible=candidates.filter(person=>!selection.has(person.id)&&normalizeText(person.name).includes(term)&&(!onlyAvailable.checked||available(person))),over=selection.size>maximum;selectedBox.classList.toggle('manager-overcapacity',over);selectedBox.innerHTML=[...selection].map(id=>{const person=db.participants.find(item=>item.id===id);if(!person)return '';const exception=!available(person);return `<div class="manager-person ${exception?'manager-exception':''}"><span>${genderMark(person)}${esc(person.name)}${spouseMark(person)}${exception?'<small>Sin disponibilidad</small>':''}</span><button type="button" data-remove="${person.id}">Quitar</button></div>`}).join('')||'<p class="muted">Aún no hay participantes asignados.</p>';if(over)selectedBox.insertAdjacentHTML('afterbegin',`<p class="capacity-alert">Sobrecupo: ${selection.size}/${maximum} participantes.</p>`);candidateBox.innerHTML=visible.map(person=>`<button type="button" class="manager-candidate ${!available(person)?'manager-exception':''}" data-add="${person.id}">${participantAvatar(person)}<span>${esc(person.name)}${genderMark(person)}${spouseMark(person)}${!available(person)?'<small>Sin disponibilidad</small>':''}</span><b>+</b></button>`).join('')||`<p class="muted">${onlyAvailable.checked?'No hay participantes disponibles que coincidan.':'No hay participantes que coincidan.'}</p>`;el.querySelectorAll('[data-remove]').forEach(button=>button.onclick=()=>{selection.delete(button.dataset.remove);warning.hidden=true;paint()});el.querySelectorAll('[data-add]').forEach(button=>button.onclick=()=>{selection.add(button.dataset.add);warning.hidden=true;paint()})};const persist=()=>{assignment.participantIds=[...selection];assignment.origin='manual';assignment.protected=true;program.updatedAt=now();save('Modificación manual de asignación',assignment.date);el.close();openProgram(program.id)};paint();search.oninput=paint;onlyAvailable.onchange=()=>{warning.hidden=true;paint()};el.querySelectorAll('[data-close]').forEach(button=>button.onclick=()=>el.close());el.querySelector('[data-save]').onclick=()=>{const unavailable=[...selection].map(id=>db.participants.find(person=>person.id===id)).filter(person=>person&&!available(person)),over=selection.size>maximum;if(!unavailable.length&&!over)return persist();const messages=[];if(unavailable.length)messages.push(`${unavailable.length} participante${unavailable.length===1?'':'s'} sin disponibilidad`);if(over)messages.push(`sobrecupo de ${selection.size}/${maximum} participantes`);warning.hidden=false;warning.innerHTML=`<strong>Hay ${messages.join(' y ')}.</strong><span>Se marcará en rojo en la agenda.</span><div><button type="button" data-review>Revisar selección</button><button type="button" class="danger" data-force-save>Guardar de todos modos</button></div>`;warning.querySelector('[data-review]').onclick=()=>warning.hidden=true;warning.querySelector('[data-force-save]').onclick=persist};el.showModal();search.focus()}
 const legacyRemove=remove;
-remove=function(kind,id){if(kind!=='participant')return legacyRemove(kind,id);const item=db.participants.find(person=>person.id===id);if(!item)return;const affectedPrograms=db.programs.filter(program=>program.assignments.some(assignment=>assignment.participantIds.includes(id))),affectedAssignments=affectedPrograms.reduce((total,program)=>total+program.assignments.filter(assignment=>assignment.participantIds.includes(id)).length,0),programCount=affectedPrograms.length;confirmDialog({title:'Eliminar participante',message:affectedAssignments?`Se eliminará “${item.name}” y se quitará de ${affectedAssignments} asignación${affectedAssignments===1?'':'es'} en ${programCount} programa${programCount===1?'':'s'}. Los programas quedarán con cambios para que puedas revisarlos.`:`¿Quieres eliminar “${item.name}”? Esta acción no se puede deshacer.`,confirmLabel:'Eliminar participante',onConfirm:()=>{affectedPrograms.forEach(program=>{program.assignments.forEach(assignment=>assignment.participantIds=assignment.participantIds.filter(personId=>personId!==id));program.updatedAt=now()});db.participants.forEach(person=>{if(person.spouseId===id)person.spouseId=''});db.participants=db.participants.filter(person=>person.id!==id);db.availabilities=db.availabilities.filter(availability=>availability.participantId!==id);db.participantResources=db.participantResources.filter(item=>item.participantId!==id);save('Eliminación de participante',affectedAssignments?`${item.name}; ${affectedAssignments} asignaciones eliminadas en ${programCount} programas`:item.name);participants()}})}
+remove=function(kind,id){if(kind!=='participant')return legacyRemove(kind,id);const item=db.participants.find(person=>person.id===id);if(!item)return;const affectedPrograms=db.programs.filter(program=>program.assignments.some(assignment=>assignment.participantIds.includes(id))),affectedAssignments=affectedPrograms.reduce((total,program)=>total+program.assignments.filter(assignment=>assignment.participantIds.includes(id)).length,0),programCount=affectedPrograms.length;confirmDialog({title:'Eliminar participante',message:affectedAssignments?`Se eliminará “${item.name}” y se quitará de ${affectedAssignments} asignación${affectedAssignments===1?'':'es'} en ${programCount} programa${programCount===1?'':'s'}. Los programas quedarán con cambios para que puedas revisarlos.`:`¿Quieres eliminar “${item.name}”? Esta acción no se puede deshacer.`,confirmLabel:'Eliminar participante',onConfirm:()=>{affectedPrograms.forEach(program=>{program.assignments.forEach(assignment=>assignment.participantIds=assignment.participantIds.filter(personId=>personId!==id));program.updatedAt=now()});db.participants.forEach(person=>{if(person.spouseId===id)person.spouseId=''});db.participants=db.participants.filter(person=>person.id!==id);db.availabilities=db.availabilities.filter(availability=>availability.participantId!==id);db.participantResources=db.participantResources.filter(item=>item.participantId!==id);normalizeCoupleCoverage();save('Eliminación de participante',affectedAssignments?`${item.name}; ${affectedAssignments} asignaciones eliminadas en ${programCount} programas`:item.name);participants()}})}
 function normalizeLoadedData(){for(const key of ['participants','types','states','turns','resources','availabilities','participantResources','programs','logs'])db[key]??=[];normalizeSettings();if(!db.states.length)db.states=[{id:'state-active',name:'Activo',color:'#15803d',schedulable:true},{id:'state-inactive',name:'Inactivo',color:'#64748b',schedulable:false}];db.types.forEach((type,index)=>type.color??=typeColors[index%typeColors.length]);db.states.forEach((state,index)=>{state.color??=stateColors[index%stateColors.length];state.schedulable??=false});db.participants.forEach(person=>{person.typeIds??=(person.typeId?[person.typeId]:[]);person.stateId??=(person.active===false?'state-inactive':'state-active');person.frequencyCount??=1;person.frequencyWeeks??=1});db.resources.forEach(resource=>{resource.minParticipants=minimumForResource(resource);const assigned=db.programs.flatMap(program=>program.assignments||[]).filter(assignment=>assignment.resourceId===resource.id).reduce((highest,assignment)=>Math.max(highest,assignment.participantIds?.length||0),0);resource.maxParticipants=Math.max(resource.minParticipants,Math.floor(Number(resource.maxParticipants)||0),assigned)});return normalizeParticipantData()}
 const currentRestoreInput=document.querySelector('#restoreInput');if(currentRestoreInput)currentRestoreInput.onchange=event=>{const file=event.target.files[0];if(!file)return;const reader=new FileReader();reader.onload=()=>{try{db=JSON.parse(reader.result);const corrections=normalizeLoadedData();save('Restauración de respaldo',corrections?`${file.name}; ${corrections} relación(es) de cónyuge o género corregida(s)`:file.name);render()}catch{noticeDialog({title:'No se pudo importar el respaldo',message:'El archivo seleccionado no es un respaldo válido.'})}};reader.readAsText(file)};
 normalizeLoadedData();enableCurrentParticipantResourcesOnce();save();
@@ -222,7 +222,7 @@ normalizeLoadedData();enableCurrentParticipantResourcesOnce();save();
 const compatibleSpousesFor=(person,gender)=>genders.includes(gender)?db.participants.filter(candidate=>candidate.id!==person?.id&&candidate.gender&&candidate.gender!==gender&&(!candidate.spouseId||candidate.spouseId===person?.id)).sort((a,b)=>a.name.localeCompare(b.name,'es')):[];
 
 participantDialog=function(p,returnContext=null){
- const slots=p?db.availabilities.filter(item=>item.participantId===p.id):[],resourceIds=db.resources.map(resource=>resource.id),typeIds=p?.typeIds??[],currentState=stateFor(p||{}),currentGender=p?.gender||'',currentSpouse=p?.spouseId||'';
+ const slots=p?db.availabilities.filter(item=>item.participantId===p.id):[],resourceIds=p?db.participantResources.filter(item=>item.participantId===p.id).map(item=>item.resourceId):db.resources.map(resource=>resource.id),typeIds=p?.typeIds??[],currentState=stateFor(p||{}),currentGender=p?.gender||'',currentSpouse=p?.spouseId||'';
  modal(`<div class="toolbar"><div><span class="eyebrow">Ficha de participante</span><h2>${p?'Editar':'Nuevo'} participante</h2></div><button type="button" class="icon-button" title="Cerrar" aria-label="Cerrar" data-close>×</button></div><div class="participant-tabs" role="tablist"><button type="button" class="active" role="tab" aria-selected="true" data-participant-tab="details">Información y disponibilidad</button><button type="button" role="tab" aria-selected="false" data-participant-tab="activity">Actividad</button></div><section data-participant-panel="details"><div class="form"><label>Nombre<input name="name" required value="${esc(p?.name)}"></label><label>Estado<select name="stateId" required>${db.states.map(state=>`<option value="${state.id}" ${selected(currentState?.id===state.id)}>${esc(state.name)}</option>`).join('')}</select></label><label>Género<select name="gender" required><option value="" ${selected(!currentGender)} disabled>Selecciona una opción</option>${genders.map(gender=>`<option value="${gender}" ${selected(currentGender===gender)}>${gender}</option>`).join('')}</select></label><label class="spouse-autocomplete">Cónyuge<div class="spouse-search-control"><input name="spouseSearch" type="search" autocomplete="off" placeholder="Buscar por nombre" value="${esc(spouseFor(p)?.name||'')}" ${currentGender?'':'disabled'}><button type="button" class="icon-button clear-spouse" title="Limpiar cónyuge" aria-label="Limpiar cónyuge" ${currentSpouse?'':'hidden'}>×</button></div><input name="spouseId" type="hidden" value="${esc(currentSpouse)}"><div class="spouse-results" role="listbox" hidden></div></label></div><div class="availability-heading"><div><h3>Roles</h3></div><p class="muted small">Puedes asignar uno o varios roles.</p></div><div class="type-options">${db.types.map(type=>`<label class="type-option" style="--tag-color:${esc(type.color)}"><input type="checkbox" name="type" value="${type.id}" ${checked(typeIds.includes(type.id))}><span>${esc(type.name)}</span></label>`).join('')||'<p class="muted">Crea roles para poder asignarlos.</p>'}</div><div class="availability-heading"><div><h3>Lugares asignables</h3></div><p class="muted small">Selecciona los puntos en los que esta persona puede participar.</p></div><div class="resource-options">${db.resources.filter(resource=>resource.active).map(resource=>`<label class="resource-option"><input type="checkbox" name="resource" value="${resource.id}" ${checked(resourceIds.includes(resource.id))}><span class="resource-marker">⌖</span><span><strong>${esc(resource.name)}</strong></span></label>`).join('')||'<p class="muted">No hay puntos activos.</p>'}</div><div class="availability-heading"><div><span class="eyebrow">Calendario semanal</span><h3>Disponibilidad de horarios</h3></div><p class="muted small">Marca únicamente los días disponibles.</p></div><div class="availability-grid">${db.turns.filter(turn=>turn.active).map(turn=>`<section class="turn-card"><div class="turn-card-title"><span class="turn-icon">◷</span><div><strong>${esc(turn.name)}</strong><small>${turn.start} – ${turn.end}</small></div></div><div class="day-options">${days.map((day,index)=>`<label class="day-option"><input type="checkbox" name="slot" value="${turn.id}|${index}" ${checked(slots.some(slot=>slot.turnId===turn.id&&slot.day===index))}><span>${day}</span></label>`).join('')}</div></section>`).join('')}</div></section><section data-participant-panel="activity" hidden><div class="availability-heading"><div><span class="eyebrow">Historial</span><h3>Actividad en programas</h3></div><p class="muted small">Consulta la carga acumulada y filtra un programa específico.</p></div>${participantActivityMarkup(p)}</section><div class="modal-actions"><button type="button" data-close>Cancelar</button><button class="primary">Guardar</button></div>`,(data,dialog)=>{
   const fresh=!p,person=p||{id:uid(),spouseId:''},state=db.states.find(item=>item.id===data.get('stateId')),gender=data.get('gender'),spouseId=data.get('spouseId'),name=data.get('name').trim();
   if(!name)return formError('Escribe el nombre del participante.');
@@ -752,6 +752,271 @@ document.addEventListener('click',event=>{
   outreachModule.handleAction(button.dataset.outreachAction,button.dataset.id);
 },true);
 
+// Cobertura conjunta de cónyuges para Predicación pública.
+// La disponibilidad y los puntos siguen siendo datos individuales; estas
+// opciones solo habilitan una cobertura contextual cuando ambos aparecen en
+// la misma asignación.
+db.coupleCoverage ??= {};
+
+function coupleCoverageKey(leftId,rightId){return leftId&&rightId?[leftId,rightId].sort().join('::'):''}
+function normalizeCoupleCoverage(){
+  db.coupleCoverage ??= {};
+  Object.entries(db.coupleCoverage).forEach(([key,value])=>{
+    const [leftId,rightId]=key.split('::'),left=db.participants.find(person=>person.id===leftId),right=db.participants.find(person=>person.id===rightId);
+    if(!left||!right||left.spouseId!==right.id||right.spouseId!==left.id){delete db.coupleCoverage[key];return;}
+    const sharedAvailability=value?.sharedAvailability===true,sharedResources=value?.sharedResources===true;
+    if(!sharedAvailability&&!sharedResources)delete db.coupleCoverage[key];
+    else db.coupleCoverage[key]={sharedAvailability,sharedResources,updatedAt:value?.updatedAt||now()};
+  });
+}
+function coupleCoverageFor(personId,spouseId){
+  const stored=db.coupleCoverage?.[coupleCoverageKey(personId,spouseId)];
+  return {sharedAvailability:stored?.sharedAvailability===true,sharedResources:stored?.sharedResources===true};
+}
+function setCoupleCoverage(person,spouseId,options){
+  normalizeCoupleCoverage();
+  const spouse=db.participants.find(candidate=>candidate.id===spouseId);
+  if(!person||!spouse||person.spouseId!==spouse.id||spouse.spouseId!==person.id)return;
+  const key=coupleCoverageKey(person.id,spouse.id),sharedAvailability=options?.sharedAvailability===true,sharedResources=options?.sharedResources===true;
+  if(!sharedAvailability&&!sharedResources){delete db.coupleCoverage[key];return;}
+  db.coupleCoverage[key]={sharedAvailability,sharedResources,updatedAt:now()};
+}
+normalizeCoupleCoverage();
+
+function directSlotAvailability(person,assignment){
+  const turn=db.turns.find(item=>item.id===assignment.turnId);
+  if(!person||!turn)return false;
+  const day=new Date(`${assignment.date}T12:00:00`).getDay();
+  return db.availabilities.some(slot=>slot.participantId===person.id&&slot.turnId===turn.id&&slot.day===day);
+}
+function hasPublicAssignmentOverlap(personId,assignment,program){
+  const turn=db.turns.find(item=>item.id===assignment.turnId);
+  return !!turn&&(program?.assignments||[]).some(other=>other.id!==assignment.id&&other.date===assignment.date&&(other.participantIds||[]).includes(personId)&&timeOverlap(db.turns.find(item=>item.id===other.turnId),turn));
+}
+function assignedSpouse(person,assignment){
+  const spouse=spouseFor(person),assignedIds=new Set(assignment?.participantIds||[]);
+  return spouse&&assignedIds.has(person?.id)&&assignedIds.has(spouse.id)?spouse:null;
+}
+function publicOutreachConflicts(personId,assignment){
+  return outreachModule.conflictsForPublicAssignment(personId,assignment)||[];
+}
+function coupleAssignmentEligibility(personId,assignment,program){
+  const person=db.participants.find(item=>item.id===personId),turn=db.turns.find(item=>item.id===assignment?.turnId);
+  if(!person)return {allowed:false,reason:'El participante ya no existe.'};
+  if(!person.active)return {allowed:false,reason:'Participante inactivo'};
+  if(!turn)return {allowed:false,reason:'El turno ya no existe'};
+  if(hasPublicAssignmentOverlap(person.id,assignment,program))return {allowed:false,reason:'Tiene otro turno asignado a esa hora'};
+  const conflicts=publicOutreachConflicts(person.id,assignment);
+  if(conflicts.length)return {allowed:false,reason:conflicts[0].message};
+
+  const spouse=assignedSpouse(person,assignment),coverage=spouse?coupleCoverageFor(person.id,spouse.id):{sharedAvailability:false,sharedResources:false};
+  const spouseCanCoverTime=!!spouse?.active&&!hasPublicAssignmentOverlap(spouse.id,assignment,program)&&!publicOutreachConflicts(spouse.id,assignment).length&&directSlotAvailability(spouse,assignment);
+  const ownTime=directSlotAvailability(person,assignment),ownResource=resourceAvailable(person.id,assignment.resourceId),spouseResource=!!spouse?.active&&resourceAvailable(spouse.id,assignment.resourceId);
+  const timeSource=ownTime?'direct':coverage.sharedAvailability&&spouseCanCoverTime?'spouse':'';
+  const resourceSource=ownResource?'direct':coverage.sharedResources&&spouseResource?'spouse':'';
+  if(!resourceSource)return {allowed:false,reason:'No está habilitado para este punto'};
+  if(!timeSource)return {allowed:false,reason:'Sin disponibilidad para este turno'};
+  return {allowed:true,spouse,usesSpouseAvailability:timeSource==='spouse',usesSpouseResource:resourceSource==='spouse'};
+}
+function coupleCoverageMessage(status){
+  if(!status?.allowed||(!status.usesSpouseAvailability&&!status.usesSpouseResource))return '';
+  const name=status.spouse?.name||'su cónyuge',parts=[];
+  if(status.usesSpouseAvailability)parts.push(`Horario cubierto por ${name}`);
+  if(status.usesSpouseResource)parts.push(`Punto habilitado por ${name}`);
+  return parts.join(' · ');
+}
+
+availableForAssignment=(participantId,assignment,program)=>coupleAssignmentEligibility(participantId,assignment,program).allowed;
+assignmentWarningReason=(person,assignment,program)=>coupleAssignmentEligibility(person?.id,assignment,program).reason||'';
+warningReasonsForAssignment=(program,assignment)=>{
+  const resource=db.resources.find(item=>item.id===assignment.resourceId),maximum=maximumForResource(resource),reasons=[];
+  if((assignment.participantIds?.length||0)>maximum)reasons.push('Sobrecupo');
+  for(const participantId of assignment.participantIds||[]){
+    const person=db.participants.find(item=>item.id===participantId),status=coupleAssignmentEligibility(participantId,assignment,program);
+    if(!status.allowed)reasons.push(`${person?.name||'Participante'}: ${status.reason}`);
+  }
+  return [...new Set(reasons)];
+};
+validate=function(program){
+  const result=[];
+  for(const assignment of program.assignments||[]){
+    const resource=db.resources.find(item=>item.id===assignment.resourceId),minimum=minimumForResource(resource),maximum=maximumForResource(resource);
+    if(!assignment.unassignedAccepted&&(assignment.participantIds?.length||0)<minimum)result.push(`${assignment.date}: ${resource?.name||'El punto'} requiere ${minimum} participante(s)`);
+    if((assignment.participantIds?.length||0)>maximum)result.push(`${assignment.date}: ${resource?.name||'El punto'} supera el máximo de ${maximum} participante(s)`);
+    for(const participantId of assignment.participantIds||[]){
+      const person=db.participants.find(item=>item.id===participantId),status=coupleAssignmentEligibility(participantId,assignment,program);
+      if(!status.allowed)result.push(`${assignment.date}: ${person?.name||'Participante'}: ${status.reason}`);
+    }
+  }
+  return [...new Set(result)];
+};
+
+generate=function(month){
+  const [year,monthNumber]=month.split('-').map(Number),out=[];
+  for(const dateValue=new Date(year,monthNumber-1,1,12);dateValue.getMonth()===monthNumber-1;dateValue.setDate(dateValue.getDate()+1)){
+    const day=dateValue.getDay(),date=iso(dateValue);
+    for(const turn of db.turns.filter(item=>item.active&&item.days.includes(day)))for(const resource of db.resources.filter(item=>item.active)){
+      const minimum=minimumForResource(resource),maximum=maximumForResource(resource),ids=[],programDraft={assignments:out};
+      const candidates=db.participants.filter(person=>person.active).sort((left,right)=>assignmentCount(left.id)-assignmentCount(right.id));
+      for(const person of candidates){
+        if(ids.length>=minimum||ids.includes(person.id))continue;
+        const spouse=spouseFor(person);
+        if(spouse&&!ids.includes(spouse.id)&&ids.length+2<=maximum){
+          const together={id:`candidate-${date}-${turn.id}-${resource.id}`,date,turnId:turn.id,resourceId:resource.id,participantIds:[...ids,person.id,spouse.id]};
+          if(coupleAssignmentEligibility(person.id,together,programDraft).allowed&&coupleAssignmentEligibility(spouse.id,together,programDraft).allowed){ids.push(person.id,spouse.id);continue;}
+        }
+        if(ids.length+1>maximum)continue;
+        const alone={id:`candidate-${date}-${turn.id}-${resource.id}`,date,turnId:turn.id,resourceId:resource.id,participantIds:[...ids,person.id]};
+        if(coupleAssignmentEligibility(person.id,alone,programDraft).allowed)ids.push(person.id);
+      }
+      out.push({id:uid(),date,turnId:turn.id,resourceId:resource.id,participantIds:ids,origin:'automática',protected:false});
+    }
+  }
+  return out;
+};
+
+const participantDialogBeforeCoupleCoverage=participantDialog;
+participantDialog=function(p,returnContext=null){
+  participantDialogBeforeCoupleCoverage(p,returnContext);
+  const dialog=document.querySelector('#modal'),form=dialog?.querySelector('#modalForm'),details=dialog?.querySelector('[data-participant-panel="details"]'),spouseInput=form?.querySelector('[name="spouseId"]');
+  if(!dialog||!form||!details||!spouseInput)return;
+  const panel=document.createElement('section');
+  panel.className='couple-coverage-settings';
+  panel.innerHTML=`<div class="availability-heading"><div><span class="eyebrow">Cónyuges</span><h3>Asignación conjunta</h3></div><p class="muted small">Estas opciones solo operan cuando ambos están asignados al mismo punto y horario.</p></div><div class="checkgrid"><label><input type="checkbox" name="coupleSharedAvailability"><span>Compartir disponibilidad de horario</span></label><label><input type="checkbox" name="coupleSharedResources"><span>Compartir habilitación de puntos</span></label></div>`;
+  details.append(panel);
+  const availabilityInput=panel.querySelector('[name="coupleSharedAvailability"]'),resourceInput=panel.querySelector('[name="coupleSharedResources"]');
+  let shownForSpouseId;
+  const refreshCoverage=()=>{
+    const spouseId=spouseInput.value,enabled=!!db.participants.find(person=>person.id===spouseId);
+    panel.hidden=!enabled;
+    availabilityInput.disabled=!enabled;resourceInput.disabled=!enabled;
+    if(spouseId===shownForSpouseId)return;
+    const settings=coupleCoverageFor(p?.id,spouseId);
+    availabilityInput.checked=enabled&&settings.sharedAvailability;resourceInput.checked=enabled&&settings.sharedResources;
+    shownForSpouseId=spouseId;
+  };
+  spouseInput.addEventListener('change',refreshCoverage);
+  form.querySelector('[name="gender"]')?.addEventListener('change',()=>requestAnimationFrame(refreshCoverage));
+  form.querySelector('[name="spouseSearch"]')?.addEventListener('input',()=>requestAnimationFrame(refreshCoverage));
+  dialog.addEventListener('click',event=>{if(event.target.closest('[data-spouse-option],.clear-spouse'))requestAnimationFrame(refreshCoverage)});
+  refreshCoverage();
+
+};
+
+assignmentDialog=function(programId,assignmentId){
+  const program=db.programs.find(item=>item.id===programId),assignment=program?.assignments.find(item=>item.id===assignmentId);
+  if(!program||!assignment)return;
+  const resource=db.resources.find(item=>item.id===assignment.resourceId),turn=db.turns.find(item=>item.id===assignment.turnId),maximum=maximumForResource(resource),selection=new Set(assignment.participantIds||[]),candidates=db.participants.filter(person=>person.active).sort((left,right)=>left.name.localeCompare(right.name,'es')),el=document.querySelector('#modal');
+  el.classList.remove('compact-form-modal');
+  el.classList.add('assignment-manager-dialog');
+  el.innerHTML=`<section class="modal assignment-manager"><div class="toolbar"><div><span class="eyebrow">${esc(assignment.date)} · ${esc(turn?.name||'Turno')}</span><h2>${esc(resource?.name||'Punto')}</h2></div><button type="button" class="icon-button" data-close aria-label="Cerrar">×</button></div><p class="muted">La cobertura conjunta solo se aplica cuando ambos cónyuges están en esta asignación.</p><div class="assignment-manager-grid"><section><h3>Participantes asignados</h3><div class="manager-selected"></div></section><section><label class="availability-filter"><input type="checkbox" checked data-only-available><span>Mostrar solo participantes disponibles</span></label><label>Buscar participante<input class="manager-search" type="search" placeholder="Escribe un nombre"></label><div class="manager-candidates"></div></section></div><div class="assignment-warning" hidden></div><div class="modal-actions"><button type="button" data-close>Cancelar</button><button type="button" class="primary" data-save>Guardar cambios</button></div></section>`;
+  const manager=el.querySelector('.assignment-manager'),selectedBox=el.querySelector('.manager-selected'),candidateBox=el.querySelector('.manager-candidates'),search=el.querySelector('.manager-search'),onlyAvailable=el.querySelector('[data-only-available]'),warning=el.querySelector('.assignment-warning');
+  const draft=()=>({...assignment,participantIds:[...selection]});
+  const statusFor=person=>coupleAssignmentEligibility(person.id,draft(),program);
+  const coverageMarkup=status=>{const message=coupleCoverageMessage(status);return message?`<small class="manager-joint-coverage" title="${esc(message)}">↔ ${esc(message)}</small>`:'';};
+  const noteMarkup=person=>person.notes?.trim()?`<button type="button" class="manager-note-trigger" data-note-person="${esc(person.id)}" aria-label="Ver nota de ${esc(person.name)}" aria-controls="assignment-note-popover" aria-expanded="false" title="Ver nota">▤</button>`:'';
+  const notePopover=document.createElement('aside');
+  notePopover.id='assignment-note-popover';
+  notePopover.className='assignment-note-popover';
+  notePopover.setAttribute('role','tooltip');
+  notePopover.hidden=true;
+  notePopover.innerHTML='<strong>Nota</strong><p></p>';
+  manager.append(notePopover);
+  let activeNoteTrigger=null;
+  let noteCloseTimer;
+  const cancelNoteClose=()=>{clearTimeout(noteCloseTimer);};
+  const closeNote=()=>{
+    cancelNoteClose();
+    if(activeNoteTrigger)activeNoteTrigger.setAttribute('aria-expanded','false');
+    activeNoteTrigger=null;
+    notePopover.hidden=true;
+  };
+  const scheduleNoteClose=()=>{cancelNoteClose();noteCloseTimer=setTimeout(()=>{if(!notePopover.matches(':hover')&&document.activeElement!==activeNoteTrigger)closeNote();},180);};
+  const positionNote=trigger=>{
+    if(!trigger||notePopover.hidden)return;
+    const rect=trigger.getBoundingClientRect(),managerRect=manager.getBoundingClientRect(),popoverRect=notePopover.getBoundingClientRect(),padding=12,leftLimit=managerRect.left+padding,rightLimit=managerRect.right-popoverRect.width-padding;
+    let left=rect.right+8;
+    if(left>rightLimit)left=rect.left-popoverRect.width-8;
+    left=Math.max(leftLimit,Math.min(rightLimit,left));
+    const below=rect.bottom+8,top=below+popoverRect.height<=window.innerHeight-padding?below:Math.max(padding,rect.top-popoverRect.height-8);
+    notePopover.style.left=`${left-managerRect.left}px`;
+    notePopover.style.top=`${top-managerRect.top}px`;
+  };
+  const openNote=trigger=>{
+    const person=db.participants.find(item=>item.id===trigger.dataset.notePerson),note=person?.notes?.trim();
+    if(!note)return closeNote();
+    if(activeNoteTrigger&&activeNoteTrigger!==trigger)activeNoteTrigger.setAttribute('aria-expanded','false');
+    activeNoteTrigger=trigger;
+    trigger.setAttribute('aria-expanded','true');
+    notePopover.querySelector('p').textContent=note;
+    notePopover.hidden=false;
+    positionNote(trigger);
+  };
+  const bindNoteTriggers=()=>{
+    el.querySelectorAll('[data-note-person]').forEach(trigger=>{
+      trigger.onclick=event=>{event.preventDefault();event.stopPropagation();if(activeNoteTrigger===trigger&&!notePopover.hidden)closeNote();else openNote(trigger);};
+      trigger.onmouseenter=()=>{cancelNoteClose();openNote(trigger);};
+      trigger.onmouseleave=scheduleNoteClose;
+      trigger.onfocus=()=>openNote(trigger);
+      trigger.onblur=scheduleNoteClose;
+      trigger.onkeydown=event=>{if(event.key==='Escape'){event.preventDefault();closeNote();trigger.focus();}};
+    });
+  };
+  notePopover.onmouseenter=cancelNoteClose;
+  notePopover.onmouseleave=scheduleNoteClose;
+  el.addEventListener('click',event=>{if(activeNoteTrigger&&!event.target.closest('[data-note-person]'))closeNote();});
+  el.addEventListener('keydown',event=>{if(event.key==='Escape'&&activeNoteTrigger){event.preventDefault();closeNote();}});
+  const repositionNote=()=>positionNote(activeNoteTrigger);
+  window.addEventListener('resize',repositionNote);
+  el.addEventListener('scroll',repositionNote,true);
+  el.addEventListener('close',()=>{closeNote();notePopover.remove();window.removeEventListener('resize',repositionNote);el.removeEventListener('scroll',repositionNote,true);},{once:true});
+  const paint=()=>{
+    const term=normalizeText(search.value),visible=candidates.filter(person=>!selection.has(person.id)&&normalizeText(person.name).includes(term)&&(!onlyAvailable.checked||statusFor(person).allowed)),over=selection.size>maximum;
+    closeNote();
+    selectedBox.classList.toggle('manager-overcapacity',over);
+    selectedBox.innerHTML=[...selection].map(id=>{const person=db.participants.find(item=>item.id===id);if(!person)return '';const status=statusFor(person),message=status.reason||coupleCoverageMessage(status);return `<div class="manager-person ${status.allowed?'':'manager-exception'}" data-remove-row="${person.id}" tabindex="0" aria-label="Quitar ${esc(person.name)}" ${message?`title="${esc(message)}"`:''}>${participantAvatar(person)}<span>${esc(person.name)}${spouseMark(person)}${coverageMarkup(status)}</span>${noteMarkup(person)}<button type="button" class="manager-remove-button" data-remove="${person.id}" aria-label="Quitar ${esc(person.name)}" title="Quitar ${esc(person.name)}">−</button></div>`;}).join('')||'<p class="muted">Aún no hay participantes asignados.</p>';
+    if(over)selectedBox.insertAdjacentHTML('afterbegin',`<p class="capacity-alert">Sobrecupo: ${selection.size}/${maximum} participantes.</p>`);
+    candidateBox.innerHTML=visible.map(person=>{const status=statusFor(person),message=status.reason||coupleCoverageMessage(status);return `<div class="manager-candidate ${status.allowed?'':'manager-exception'}" data-add-row="${person.id}" tabindex="0" aria-label="Agregar ${esc(person.name)}" ${message?`title="${esc(message)}"`:''}>${participantAvatar(person)}<span>${esc(person.name)}${spouseMark(person)}${coverageMarkup(status)}</span>${noteMarkup(person)}<button type="button" class="manager-add-button" data-add="${person.id}" aria-label="Agregar ${esc(person.name)}">+</button></div>`;}).join('')||`<p class="muted">${onlyAvailable.checked?'No hay participantes disponibles que coincidan.':'No hay participantes que coincidan.'}</p>`;
+    bindNoteTriggers();
+    el.querySelectorAll('[data-remove]').forEach(button=>button.onclick=()=>{selection.delete(button.dataset.remove);warning.hidden=true;paint()});
+    el.querySelectorAll('[data-add]').forEach(button=>button.onclick=()=>{selection.add(button.dataset.add);warning.hidden=true;paint()});
+    const activateRow=(row,action)=>{if(action==='add')selection.add(row.dataset.addRow);else selection.delete(row.dataset.removeRow);warning.hidden=true;paint();};
+    selectedBox.querySelectorAll('[data-remove-row]').forEach(row=>{row.onclick=event=>{if(!event.target.closest('button'))activateRow(row,'remove');};row.onkeydown=event=>{if(event.target===row&&['Enter',' '].includes(event.key)){event.preventDefault();activateRow(row,'remove');}};});
+    candidateBox.querySelectorAll('[data-add-row]').forEach(row=>{row.onclick=event=>{if(!event.target.closest('button'))activateRow(row,'add');};row.onkeydown=event=>{if(event.target===row&&['Enter',' '].includes(event.key)){event.preventDefault();activateRow(row,'add');}};});
+  };
+  const persist=()=>{assignment.participantIds=[...selection];assignment.origin='manual';assignment.protected=true;program.updatedAt=now();save('Modificación manual de asignación',assignment.date);el.close();openProgram(program.id)};
+  el.addEventListener('close',()=>el.classList.remove('assignment-manager-dialog'),{once:true});
+  paint();search.oninput=paint;onlyAvailable.onchange=()=>{warning.hidden=true;paint()};el.querySelectorAll('[data-close]').forEach(button=>button.onclick=()=>el.close());
+  el.querySelector('[data-save]').onclick=()=>{
+    const unavailable=[...selection].map(id=>db.participants.find(person=>person.id===id)).filter(person=>person&&!statusFor(person).allowed),over=selection.size>maximum;
+    if(!unavailable.length&&!over)return persist();
+    const messages=[];if(unavailable.length)messages.push(`${unavailable.length} participante${unavailable.length===1?'':'s'} sin disponibilidad`);if(over)messages.push(`sobrecupo de ${selection.size}/${maximum} participantes`);
+    warning.hidden=false;warning.innerHTML=`<strong>Hay ${messages.join(' y ')}.</strong><span>Se marcarán como advertencia en la agenda.</span><div><button type="button" data-review>Revisar selección</button><button type="button" class="danger" data-force-save>Guardar de todos modos</button></div>`;
+    warning.querySelector('[data-review]').onclick=()=>warning.hidden=true;warning.querySelector('[data-force-save]').onclick=persist;
+  };
+  el.showModal();search.focus();
+};
+
+const enhanceAssignmentEditorsBeforeCoupleCoverage=enhanceAssignmentEditors;
+enhanceAssignmentEditors=function(){
+  enhanceAssignmentEditorsBeforeCoupleCoverage();
+  document.querySelectorAll('.program-slot[data-program-id][data-assignment-id]').forEach(slot=>{
+    const program=db.programs.find(item=>item.id===slot.dataset.programId),assignment=program?.assignments.find(item=>item.id===slot.dataset.assignmentId);
+    if(!program||!assignment)return;
+    slot.querySelectorAll('.assigned-chip').forEach((chip,index)=>{
+      const personId=assignment.participantIds?.[index],status=coupleAssignmentEligibility(personId,assignment,program),message=coupleCoverageMessage(status);
+      chip.querySelector('.joint-coverage-mark')?.remove();
+      chip.classList.toggle('assignment-joint-coverage',!!message);
+      if(!message)return;
+      const mark=document.createElement('span');mark.className='joint-coverage-mark';mark.textContent='↔';mark.title=message;mark.setAttribute('aria-label',message);
+      chip.insertBefore(mark,chip.querySelector('[data-person-id]')||chip.lastChild);
+      chip.title=message;
+    });
+  });
+};
+
+render();
+
 // La cabecera del programa público debe identificar claramente el módulo.
 const openPublicProgramBeforeLabel= openProgram;
 openProgram=function(id){
@@ -1044,7 +1309,7 @@ participantDialog=function(p,returnContext=null){
     if(!state)return formError('Selecciona el estado del participante.');
     if(!genders.includes(gender))return formError('Selecciona el género del participante.');
     const linkError=spouseLinkError(person,gender,spouseId);if(linkError)return formError(linkError);
-    person.name=name;person.stateId=state.id;person.active=state.schedulable===true;person.gender=gender;person.typeIds=typeIds;person.notes=data.get('participantNotes')?.trim()||'';if(fresh)db.participants.push(person);setSpouseLink(person,spouseId);
+    person.name=name;person.stateId=state.id;person.active=state.schedulable===true;person.gender=gender;person.typeIds=typeIds;person.notes=data.get('participantNotes')?.trim()||'';if(fresh)db.participants.push(person);setSpouseLink(person,spouseId);setCoupleCoverage(person,spouseId,{sharedAvailability:data.get('coupleSharedAvailability')==='on',sharedResources:data.get('coupleSharedResources')==='on'});normalizeCoupleCoverage();
     db.participantResources=db.participantResources.filter(item=>item.participantId!==person.id);data.getAll('resource').forEach(resourceId=>db.participantResources.push({participantId:person.id,resourceId}));
     db.availabilities=db.availabilities.filter(item=>item.participantId!==person.id);data.getAll('slot').forEach(value=>{const [turnId,day]=value.split('|');db.availabilities.push({participantId:person.id,turnId,day:+day})});
     person.frequencyCount=Math.max(1,Math.min(52,Math.floor(Number(data.get('frequencyCount'))||1)));person.frequencyWeeks=Math.max(1,Math.min(52,Math.floor(Number(data.get('frequencyWeeks'))||1)));

@@ -136,6 +136,10 @@ Las vistas de listado de ambos módulos presentan la tabla directamente bajo la 
 
 `assignmentIsResolved` determina si una tarjeta cumple el mínimo requerido. `warningReasonsForAssignment` detecta sobrecupo, participante inactivo, falta de habilitación para un punto, falta de disponibilidad y solapamientos. En Salidas de predicación, los datos faltantes se clasifican como `Pendientes` (naranja) y los conflictos o configuraciones inválidas como `Advertencias` (rojo).
 
+La disponibilidad y los puntos elegibles se registran individualmente. Una pareja puede habilitar, por separado, la cobertura conjunta de horarios y de puntos: solo al estar ambos cónyuges en la misma asignación, uno puede cubrir la disponibilidad o habilitación que el otro no tenga declarada. La cobertura no modifica los registros individuales, exige que ambos estén activos y sin conflictos, y nunca habilita un punto para el que ninguno de los dos esté registrado. La interfaz lo indica como información; las exportaciones conservan únicamente los nombres asignados.
+
+El editor de una asignación muestra un icono de nota solo cuando el participante tiene notas en su ficha. Al pasar el cursor, enfocarlo o pulsarlo se abre una tarjeta con la nota completa; la tarjeta se mantiene dentro de los límites del modal y se posiciona al lado con espacio disponible. Las filas de asignados y candidatos son interactivas en toda su superficie: pulsarlas quita o agrega a la persona, mientras los iconos de nota y `+`/`−` conservan su propia acción. Las personas no disponibles se distinguen por color y el motivo se conserva en el tooltip, sin texto adicional dentro de la fila.
+
 Para una salida, la disponibilidad del capitán se evalúa en este orden conceptual: el participante debe tener el rol `Capitan`, debe haber declarado disponibilidad para el horario puntual y no debe tener una colisión con Predicación pública ni con otra salida. Una excepción guardada conserva el conflicto para revisión; no convierte al capitán en disponible.
 
 `classifyProgramAssignments` divide las tarjetas en:
@@ -181,6 +185,8 @@ Para acciones nuevas:
 - Conservar `title`, `aria-label`, `aria-pressed` y estados de foco para controles interactivos.
 - En modo oscuro, validar contraste de texto, bordes y estados hover.
 - Las tarjetas de asignación deben conservar su affordance de edición y no mostrar botones contradictorios con el estado.
+- El editor de asignaciones debe conservar el clic de fila completa para agregar o quitar participantes, con el mismo estado hover y foco en ambas columnas. Los iconos de nota no deben disparar ese cambio.
+- Las notas de participante dentro del editor se muestran mediante una tarjeta emergente completa, con soporte para cursor, teclado y toque; su posición no debe salirse ni quedar recortada por el modal.
 - La ficha de participante debe ocultar la disponibilidad de capitán para personas sin ese rol y mostrar las estadísticas de capitán solo cuando correspondan.
 - La confirmación para guardar una asignación incompatible solo debe existir cuando hay conflicto; una asignación compatible no necesita un mensaje de disponibilidad positivo.
 - Los buscadores con autocompletado deben manejar `compositionstart`/`compositionend` y una cola con `requestAnimationFrame` para no duplicar caracteres en Chrome para Android; los listeners deben asignarse de forma idempotente.
