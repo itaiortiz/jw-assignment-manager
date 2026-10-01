@@ -1,18 +1,18 @@
-# Programa de predicación — MVP local
+# Programa de predicación — aplicación local
 
 ## Ejecutar
 
 Desde esta carpeta, ejecutar `npm start` y abrir `http://localhost:5173`.
 
-La aplicación funciona sin internet y guarda los datos en el almacenamiento local del navegador. `Respaldar` descarga un JSON restaurable. La exportación CSV puede abrirse en Excel. En Predicación pública, `Exportar PDF` permite elegir el formato original, una versión compacta optimizada para lectura o una imagen PNG por semana; esta última está pensada para compartir por WhatsApp. El módulo de Salidas de predicación ofrece un menú `Exportar` con las opciones PDF y PNG; ambos formatos usan la misma vista mensual de una sola hoja. El PNG conserva la tipografía sans-serif y el estilo visual del calendario, y se genera en alta resolución para compartirlo o imprimirlo.
+La aplicación funciona sin internet y guarda los datos en el almacenamiento local del navegador; no envía los respaldos ni la información importada a Internet. Una instalación nueva inicia completamente vacía: no crea participantes, roles, estados, turnos, puntos, horarios ni programas. `Respaldar` descarga un JSON restaurable; la restauración es la única forma de cargar datos de manera masiva. La exportación CSV puede abrirse en Excel. En Predicación pública, `Exportar PDF` permite elegir el formato original, una versión compacta optimizada para lectura o una imagen PNG por semana; esta última está pensada para compartir por WhatsApp. El módulo de Salidas de predicación ofrece un menú `Exportar` con las opciones PDF y PNG; ambos formatos usan la misma vista mensual de una sola hoja. El PNG conserva la tipografía sans-serif y el estilo visual del calendario, y se genera en alta resolución para compartirlo o imprimirlo.
 
 ## Alcance implementado
 
 - Participantes con ficha editable de nombre, estado, roles, notas y disponibilidad.
 - Ficha de participante con pestañas de información, notas y actividad; la pestaña de disponibilidad de capitán solo aparece cuando la persona tiene el rol `Capitan`.
 - Actividad consultable por año y mes, con participación en Predicación pública y estadísticas de servicio como capitán cuando corresponde.
-- Roles predeterminados protegidos: su nombre no se puede cambiar, los roles permiten editar únicamente el color y no se pueden eliminar; los roles adicionales sí son configurables.
-- Estados predeterminados protegidos contra edición y eliminación; los estados adicionales sí son configurables.
+- Roles configurables; una instalación nueva no incluye roles.
+- Estados configurables; una instalación nueva no incluye estados.
 - Turnos y puntos configurables, editables y eliminables cuando no tienen historial asociado; cada turno tiene un color configurable que se usa en sus etiquetas de exportación.
 - Disponibilidad pública por día y turno, editable desde la ficha o desde su pantalla.
 - Cobertura conjunta opcional por cónyuges: al asignarlos juntos al mismo punto y horario, pueden compartir disponibilidad de horario y/o habilitación de puntos sin modificar sus registros individuales; el PDF conserva la presentación normal de nombres.
@@ -24,7 +24,7 @@ La aplicación funciona sin internet y guarda los datos en el almacenamiento loc
 - Edición manual protegida y regeneración de espacios no protegidos.
 - Detección de incompletos, participantes inactivos y solapamientos.
 - Estados de revisión del programa, incluyendo edición, revisado y cambios sin revisar.
-- Historial, respaldo/restauración, CSV e impresión/PDF.
+- Historial con operador declarado, respaldos versionados con detección de revisiones antiguas, CSV e impresión/PDF.
 - Módulo independiente de Salidas de predicación con programas mensuales, lugares de encuentro, horarios puntuales, capitanes y detección de conflictos con predicación pública, otras salidas y la disponibilidad declarada del capitán.
 - Selector de capitán con opciones disponibles/no disponibles; la opción `Guardar de todos modos` solo se muestra cuando existe un conflicto.
 - Estados `Sin actividad` y `Otros planes` para salidas, con razón predeterminada cuando no se captura texto adicional.
@@ -40,4 +40,4 @@ La aplicación funciona sin internet y guarda los datos en el almacenamiento loc
 - Exportación mensual de Salidas de predicación en PDF o PNG; solo se incluyen salidas válidas, sin pendientes ni advertencias no confirmadas. La imagen PNG aplica explícitamente la tipografía del calendario al documento exportado para evitar sustituciones de fuente del navegador.
 - Exportación de Predicación pública con selector de PDF original, PDF compacto y PNG semanal. El formato compacto usa filas alternas, ubicación con pin monocromático, una cuadrícula de nombres de dos columnas, el color configurado para el turno y una semana por página; los PNG incluyen encabezado principal en la primera imagen y pie paginado en todas.
 
-La siguiente evolución recomendada es sustituir el adaptador de `localStorage` por repositorios SQLite y migrar la interfaz a React/Tauri sin mover las reglas de generación y validación.
+Al abrir la aplicación sin datos activos se muestra una pantalla para importar un respaldo o crear un espacio vacío. El cierre del espacio exige confirmar el respaldo si hay cambios desde la última exportación. La siguiente evolución recomendada es sustituir el adaptador de `localStorage` por repositorios SQLite y migrar la interfaz a React/Tauri sin mover las reglas de generación y validación.

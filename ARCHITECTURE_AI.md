@@ -34,7 +34,6 @@ npm start
 │  ├─ frequency.css           # Controles de frecuencia/recurrencia
 │  ├─ overrides.css           # Ajustes visuales transversales
 │  ├─ tag-overrides.css       # Ajustes para etiquetas y colores
-│  ├─ report-import.js        # Datos estáticos usados por la importación inicial
 │  └─ pdf-export.js           # Exportación PDF y PNG semanal de Predicación pública
 ├─ construir_programa.mjs     # Utilidad auxiliar fuera del runtime de la app
 ├─ crear_informe_participantes.mjs
@@ -60,7 +59,7 @@ No introducir un framework parcialmente. Si se migra a React, Vue o Tauri, prime
 
 ## 5. Estado y persistencia
 
-La clave principal es `predicacion.mvp.v1`. `main.js` carga el objeto global `db` desde esa clave o usa `seed` cuando no existe.
+La clave principal es `predicacion.app.v2`; `predicacion.app.v2.workspace-active` indica si hay un espacio abierto. `main.js` carga el objeto global `db` desde esa clave o crea un esquema vacío cuando no existe. El arranque no ejecuta seeds ni importaciones automáticas; los datos solo entran por la interfaz o mediante la restauración explícita de un respaldo. No existe ninguna llamada de red para enviar la información importada: permanece en el navegador local.
 
 Colecciones principales:
 
@@ -79,11 +78,11 @@ Colecciones principales:
 - `logs`: historial de acciones.
 - `settings`: configuración general, incluido el nombre de congregación.
 
-Cada escritura debe pasar por `save(action, detail)`. Esta función normaliza configuraciones, sincroniza estados de programa, registra el historial y serializa `db` en `localStorage`.
+Cada escritura debe pasar por `save(action, detail)`. Esta función normaliza configuraciones, sincroniza estados de programa, incrementa la revisión, registra el operador declarado en el historial y serializa `db` en `localStorage`. Los respaldos usan una envoltura `predicacion-backup` con `formatVersion`, `workspaceId`, `revision`, fechas y un SHA-256 del contenido; la importación valida esa envoltura y advierte antes de reemplazar una copia más reciente.
 
 Preferir cambios compatibles y normalizaciones idempotentes. Los datos existentes pueden venir de versiones anteriores y no deben romperse por agregar campos nuevos.
 
-Los roles y estados existentes se normalizan como predeterminados del sistema cuando todavía no tienen la marca `isSystemDefault`. Los roles predeterminados no se pueden renombrar ni eliminar, pero su color sí puede editarse; los estados predeterminados no se pueden editar ni eliminar. Los registros nuevos se crean con `isSystemDefault: false`. La protección debe existir tanto en la interfaz como en los manejadores de acciones para evitar que una acción invocada manualmente la omita. El rol `Regular` recibe `systemKey: 'precursor-regular'` para identificarlo sin depender únicamente del texto visible.
+Los roles y estados no se crean automáticamente. Cuando se cargan registros existentes sin la marca `isSystemDefault`, se normalizan como configurables (`false`); los registros nuevos también se crean con `isSystemDefault: false`. La protección debe existir tanto en la interfaz como en los manejadores de acciones para evitar que una acción invocada manualmente la omita. El rol `Regular` recibe `systemKey: 'precursor-regular'` para identificarlo sin depender únicamente del texto visible.
 
 ## 6. Modelo de programa y asignación
 
