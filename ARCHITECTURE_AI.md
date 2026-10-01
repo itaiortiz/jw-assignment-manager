@@ -59,7 +59,7 @@ No introducir un framework parcialmente. Si se migra a React, Vue o Tauri, prime
 
 ## 5. Estado y persistencia
 
-La clave principal es `predicacion.app.v2`; `predicacion.app.v2.workspace-active` indica si hay un espacio abierto. `main.js` carga el objeto global `db` desde esa clave o crea un esquema vacío cuando no existe. El arranque no ejecuta seeds ni importaciones automáticas; los datos solo entran por la interfaz o mediante la restauración explícita de un respaldo. No existe ninguna llamada de red para enviar la información importada: permanece en el navegador local.
+La clave principal es `predicacion.app.v2`; `predicacion.app.v2.workspace-active` indica si hay un espacio abierto. `main.js` carga el objeto global `db` desde esa clave o crea un esquema vacío cuando no existe. El arranque no ejecuta seeds ni importaciones automáticas; los datos solo entran por la interfaz o mediante la restauración explícita de un respaldo. La pantalla inicial ofrece las acciones `Importar` y `Crear nuevo`. No existe ninguna llamada de red para enviar la información importada: permanece en el navegador local.
 
 Colecciones principales:
 
