@@ -10,7 +10,7 @@ npm install
 npm start
 ```
 
-Después abre <http://localhost:5173>. `npm install` es necesario la primera vez para instalar el editor de paneles; el uso posterior de la aplicación puede ser sin internet.
+Después abre <http://localhost:5173>. Los archivos necesarios del editor de paneles están incluidos en `app/vendor/gridstack/`, así que el sitio estático también funciona sin instalar dependencias. `npm install` solo es necesario para tareas de desarrollo o actualización de dependencias.
 
 La aplicación no requiere base de datos ni conexión a internet. Tus datos permanecen en el navegador donde abres la aplicación; no se envían a Internet. Mientras un espacio de trabajo está abierto, los datos se guardan automáticamente en `localStorage`. Los respaldos son archivos JSON versionados: incluyen un identificador de espacio, revisión, fechas e integridad para advertir antes de importar una copia anterior.
 

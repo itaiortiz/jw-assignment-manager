@@ -2,7 +2,7 @@
 
 ## Ejecutar
 
-Desde esta carpeta, ejecutar `npm install` una vez, luego `npm start` y abrir `http://localhost:5173`. La dependencia del editor de Inicio queda instalada localmente; después la aplicación puede funcionar sin internet.
+Desde esta carpeta, ejecutar `npm start` y abrir `http://localhost:5173`. Los recursos del editor de Inicio están incluidos en `vendor/gridstack/`, por lo que el sitio estático puede publicarse sin `node_modules` y la aplicación puede funcionar sin internet. `npm install` solo es necesario para desarrollo o actualización de dependencias.
 
 La aplicación funciona sin internet y guarda los datos en el almacenamiento local del navegador; no envía los respaldos ni la información importada a Internet. Una instalación nueva inicia completamente vacía: no crea participantes, roles, estados, turnos, puntos, horarios ni programas. `Respaldar` descarga un JSON restaurable; la restauración es la única forma de cargar datos de manera masiva. La exportación CSV puede abrirse en Excel. En Predicación pública, `Exportar PDF` permite elegir el formato original, una versión compacta optimizada para lectura o una imagen PNG por semana; esta última está pensada para compartir por WhatsApp. El módulo de Salidas de predicación ofrece un menú `Exportar` con las opciones PDF y PNG; ambos formatos usan la misma vista mensual de una sola hoja. El PNG conserva la tipografía sans-serif y el estilo visual del calendario, y se genera en alta resolución para compartirlo o imprimirlo.
 
