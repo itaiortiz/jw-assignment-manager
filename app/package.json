@@ -2,5 +2,10 @@
   "name": "programa-predicacion-mvp",
   "version": "0.1.0",
   "private": true,
-  "scripts": { "start": "node server.mjs" }
+  "scripts": {
+    "start": "node server.mjs"
+  },
+  "dependencies": {
+    "gridstack": "^14.0.0"
+  }
 }

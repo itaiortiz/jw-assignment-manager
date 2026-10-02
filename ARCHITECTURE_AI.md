@@ -10,10 +10,11 @@ El producto actual es un MVP de uso local. No existe backend, autenticación ni 
 
 ```powershell
 cd app
+npm install
 npm start
 ```
 
-`app/server.mjs` inicia un servidor HTTP estático en el puerto `5173`. Sirve `index.html`, JavaScript y CSS desde la carpeta `app`. No hay bundler ni paso de compilación.
+`app/server.mjs` inicia un servidor HTTP estático en el puerto `5173`. Sirve `index.html`, JavaScript y CSS desde la carpeta `app`. No hay bundler ni paso de compilación. `npm install` instala GridStack en `app/node_modules/`; `index.html` carga su CSS y su script local antes de `main.js`. Tras la instalación inicial, la aplicación funciona sin conexión.
 
 ## 3. Mapa del repositorio
 
@@ -24,6 +25,9 @@ npm start
 │  ├─ main.js                 # Estado, dominio, renderizado, eventos y persistencia
 │  ├─ server.mjs              # Servidor estático local
 │  ├─ package.json            # npm start
+│  ├─ dashboard.js            # Modelo puro de actividad y alertas de Inicio
+│  ├─ dashboard-layout.js     # Diseño predeterminado y migración de preferencias
+│  ├─ dashboard.css           # Presentación y modo de edición de Inicio
 │  ├─ styles.css              # Tokens y estilos globales
 │  ├─ sidebar.css             # Navegación lateral
 │  ├─ program-table.css       # Calendario, agenda, tarjetas y estados de programa
@@ -78,7 +82,9 @@ Colecciones principales:
 - `logs`: historial de acciones.
 - `settings`: configuración general, incluido el nombre de congregación.
 
-Cada escritura debe pasar por `save(action, detail)`. Esta función normaliza configuraciones, sincroniza estados de programa, incrementa la revisión, registra el operador declarado en el historial y serializa `db` en `localStorage`. Los respaldos usan una envoltura `predicacion-backup` con `formatVersion`, `workspaceId`, `revision`, fechas y un SHA-256 del contenido; la importación valida esa envoltura y advierte antes de reemplazar una copia más reciente.
+Cada escritura de datos operativos debe pasar por `save(action, detail)`. Esta función normaliza configuraciones, sincroniza estados de programa, incrementa la revisión, registra el operador declarado en el historial y serializa `db` en `localStorage`. Los respaldos usan una envoltura `predicacion-backup` con `formatVersion`, `workspaceId`, `revision`, fechas y un SHA-256 del contenido; la importación valida esa envoltura y advierte antes de reemplazar una copia más reciente.
+
+La disposición de Inicio es una preferencia de interfaz aparte: `predicacion.dashboard-layout.v2:<workspaceId>`. Guarda identificador, posición y ancho de cada módulo; no incrementa la revisión operativa ni se incluye en el respaldo de datos. `dashboard-layout.js` normaliza entradas inválidas y convierte preferencias v1 de tres columnas a v2 de cuatro. Un diseño guardado prevalece sobre el predeterminado; `Restablecer diseño` solo lo sustituye al pulsar después `Guardar diseño`.
 
 Preferir cambios compatibles y normalizaciones idempotentes. Los datos existentes pueden venir de versiones anteriores y no deben romperse por agregar campos nuevos.
 
@@ -175,6 +181,8 @@ Las tarjetas de programa tienen dos presentaciones: `calendarProgramMarkup` y `a
 
 Hay envolturas posteriores alrededor de algunas funciones (`openProgram`, `shell`, `enhanceAssignmentEditors`, `assignmentDialog`). Antes de reemplazar una función, revisar la cadena de envolturas para no perder comportamiento agregado en iteraciones anteriores.
 
+Inicio usa `dashboard.js` para reunir programas públicos y salidas sin modificar `db`. `main.js` monta sus módulos en GridStack y destruye la instancia anterior antes de que `shell()` reemplace el DOM. El diseño predeterminado ubica indicadores y Agenda a la izquierda; Programas en curso y Últimos cambios a la derecha; Configuración bajo la Agenda. Atención requerida es condicional. En escritorio, los módulos ocupan dos o cuatro columnas; el borde permite cambiar el ancho y GridStack ajusta la altura al contenido. En pantallas estrechas se apilan. Al cambiar el día o expandir la semana, recalcular la altura de la Agenda para evitar recortes. El modo de edición mantiene Guardar, Cancelar y Restablecer separados de las acciones operativas.
+
 Para acciones nuevas:
 
 1. Renderiza el control con `data-action` o un atributo `data-*` específico.
@@ -206,7 +214,7 @@ Para acciones nuevas:
 
 - `main.js` es grande y mezcla dominio, vistas y eventos; modularizarlo es la principal mejora técnica.
 - `localStorage` no ofrece concurrencia, respaldo automático ni control de acceso.
-- No hay pruebas automatizadas; antes de una refactorización importante conviene crear pruebas para generación, disponibilidad, validación y comparación estructural.
+- Existen pruebas automatizadas del modelo de Inicio y de la migración/normalización de su distribución en `app/dashboard.test.mjs` y `app/dashboard-layout.test.mjs`. Aún conviene agregar pruebas para generación, disponibilidad, validación y comparación estructural antes de refactorizaciones importantes.
 - El servidor local es deliberadamente mínimo y no debe considerarse una capa de seguridad.
 - Los scripts raíz son utilidades históricas y no forman parte del arranque de la aplicación.
 

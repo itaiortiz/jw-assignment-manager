@@ -2,11 +2,15 @@
 
 ## Ejecutar
 
-Desde esta carpeta, ejecutar `npm start` y abrir `http://localhost:5173`.
+Desde esta carpeta, ejecutar `npm install` una vez, luego `npm start` y abrir `http://localhost:5173`. La dependencia del editor de Inicio queda instalada localmente; después la aplicación puede funcionar sin internet.
 
 La aplicación funciona sin internet y guarda los datos en el almacenamiento local del navegador; no envía los respaldos ni la información importada a Internet. Una instalación nueva inicia completamente vacía: no crea participantes, roles, estados, turnos, puntos, horarios ni programas. `Respaldar` descarga un JSON restaurable; la restauración es la única forma de cargar datos de manera masiva. La exportación CSV puede abrirse en Excel. En Predicación pública, `Exportar PDF` permite elegir el formato original, una versión compacta optimizada para lectura o una imagen PNG por semana; esta última está pensada para compartir por WhatsApp. El módulo de Salidas de predicación ofrece un menú `Exportar` con las opciones PDF y PNG; ambos formatos usan la misma vista mensual de una sola hoja. El PNG conserva la tipografía sans-serif y el estilo visual del calendario, y se genera en alta resolución para compartirlo o imprimirlo.
 
 ## Alcance implementado
+
+- Inicio personalizable: arrastrar módulos sobre una cuadrícula de cuatro columnas, redimensionarlos desde el borde a medio ancho o ancho completo, guardar/cancelar/restablecer el diseño y conservar la altura automática del contenido. En pantallas estrechas los módulos se apilan sin recortar actividades.
+
+  El acomodo predeterminado sitúa indicadores y Agenda a la izquierda; Programas en curso y Últimos cambios a la derecha; Configuración debajo de la Agenda. Atención requerida solo aparece cuando hay avisos. Los diseños ya guardados no se sobrescriben: usa `Personalizar Inicio → Restablecer diseño → Guardar diseño` para aplicar el nuevo predeterminado. La preferencia se conserva en este navegador por espacio de trabajo y no viaja con el respaldo de datos.
 
 - Participantes con ficha editable de nombre, estado, roles, notas y disponibilidad.
 - Ficha de participante con pestañas de información, notas y actividad; la pestaña de disponibilidad de capitán solo aparece cuando la persona tiene el rol `Capitan`.
@@ -41,3 +45,7 @@ La aplicación funciona sin internet y guarda los datos en el almacenamiento loc
 - Exportación de Predicación pública con selector de PDF original, PDF compacto y PNG semanal. El formato compacto usa filas alternas, ubicación con pin monocromático, una cuadrícula de nombres de dos columnas, el color configurado para el turno y una semana por página; los PNG incluyen encabezado principal en la primera imagen y pie paginado en todas.
 
 Al abrir la aplicación sin datos activos se muestra una pantalla para importar un espacio de trabajo o crear uno nuevo, con las acciones `Importar` y `Crear nuevo`. El cierre del espacio exige confirmar el respaldo si hay cambios desde la última exportación. La siguiente evolución recomendada es sustituir el adaptador de `localStorage` por repositorios SQLite y migrar la interfaz a React/Tauri sin mover las reglas de generación y validación.
+
+## Pruebas
+
+Desde la raíz del repositorio, ejecuta `node --test app/dashboard.test.mjs app/dashboard-layout.test.mjs` para comprobar los cálculos de Inicio y la normalización/migración de preferencias de distribución.

@@ -1,6 +1,8 @@
 import {exportPublicPdf,exportPublicWeeklyPng} from './pdf-export.js';
 import {createOutreachModule} from './outreach.js';
 import {exportOutreachPdf,exportOutreachPng} from './outreach-pdf.js';
+import {createDashboardModel,classifyOutreachForDashboard} from './dashboard.js';
+import {DEFAULT_DASHBOARD_LAYOUT,normalizeDashboardLayout} from './dashboard-layout.js';
 const KEY='predicacion.app.v2',WORKSPACE_ACTIVE_KEY='predicacion.app.v2.workspace-active',THEME_KEY='predicacion.theme',SIDEBAR_KEY='predicacion.sidebar-collapsed',BACKUP_FORMAT='predicacion-backup',BACKUP_FORMAT_VERSION=1;
 function setTheme(theme){const nextTheme=theme==='dark'?'dark':'light';document.documentElement.dataset.theme=nextTheme;localStorage.setItem(THEME_KEY,nextTheme)}
 setTheme(localStorage.getItem(THEME_KEY)||'light');
@@ -9,6 +11,7 @@ const days=['Domingo','Lunes','Martes','Miércoles','Jueves','Viernes','Sábado'
 const emptyDatabase=()=>({participants:[],types:[],states:[],turns:[],resources:[],availabilities:[],participantResources:[],programs:[],logs:[],settings:{},outreach:{places:[],rules:[],programs:[],version:1},meta:{}});
 const storedWorkspace=localStorage.getItem(KEY);
 let db=JSON.parse(storedWorkspace||'null')??emptyDatabase(),workspaceActive=localStorage.getItem(WORKSPACE_ACTIVE_KEY)==='true',view='dashboard',availabilityId='',participantFilters={name:'',type:'',state:'',gender:'',spouse:''},participantSort={key:'name',dir:'asc'},programScope='all',programNotice=null;
+let dashboardGrid=null;
 for(const key of ['participants','types','states','turns','resources','availabilities','participantResources','programs','logs'])db[key]??=[];
 normalizeSettings();
 const typeColors=['#1f77b4','#7c3aed','#0f766e','#b45309','#be185d','#4f46e5'];
@@ -44,7 +47,7 @@ function enhanceProgramToolbar(){const tools=document.querySelector('.program-to
 const refineProgramMessages=enhanceProgramToolbar;
 enhanceProgramToolbar=function(){refineProgramMessages();const message=document.querySelector('.program-message');if(message)message.textContent=message.textContent.replace(' asignaciones que necesitan participantes.',' asignaciones pendientes.');const note=document.querySelector('.program-note');if(note){const count=Number(note.textContent.match(/\d+/)?.[0]||0);note.textContent=`Hay ${count} ${count===1?'advertencia que requiere':'advertencias que requieren'} atención.`}};
 function replaceRoleText(root){const walker=document.createTreeWalker(root,NodeFilter.SHOW_TEXT);let node;while(node=walker.nextNode())node.nodeValue=node.nodeValue.replaceAll('Etiquetas','Roles').replaceAll('Etiquetas','Roles').replaceAll('etiquetas','roles').replaceAll('Etiqueta','Rol').replaceAll('etiqueta','rol')}
-function shell(html){document.querySelector('#app').innerHTML=html;replaceRoleText(document.querySelector('#app'));document.querySelectorAll('[data-action]').forEach(b=>b.onclick=actions);enhanceProgramToolbar();enhanceAssignmentEditors()}
+function shell(html){if(dashboardGrid){dashboardGrid.destroy(false);dashboardGrid=null}document.querySelector('#app').innerHTML=html;replaceRoleText(document.querySelector('#app'));document.querySelectorAll('[data-action]').forEach(b=>b.onclick=actions);enhanceProgramToolbar();enhanceAssignmentEditors()}
 function congregationDialog(){modal(`<div class="toolbar"><div><span class="eyebrow">Configuración local</span><h2>Congregación</h2></div><button type="button" class="icon-button" title="Cerrar" aria-label="Cerrar" data-close>×</button></div><div class="form"><label>Nombre de la congregación<input name="congregationName" required value="${esc(db.settings.congregationName)}"></label></div><div class="modal-actions"><button type="button" data-close>Cancelar</button><button class="primary">Guardar</button></div>`,(f,m)=>{const name=f.get('congregationName').trim();if(!name)return formError('Escribe el nombre de la congregación.');db.settings.congregationName=name;save('Actualización de congregación',name);m.close()})}
 function setupHeaderSystem(){const header=document.querySelector('.workspace>header');if(!header)return;header.innerHTML=`<div class="header-spacer" aria-hidden="true"></div><details class="header-system"><summary title="Opciones y datos de la aplicación">Opciones <b>⌄</b></summary><div><button type="button" id="congregationBtn"><span>⌂</span>Congregación</button><button type="button" id="headerHistoryBtn"><span>◷</span>Historial de actividad</button><button type="button" id="backupBtn"><span>↑</span>Exportar datos</button><label class="header-system-file"><span>↓</span>Importar datos<input id="restoreInput" type="file" accept="application/json" hidden></label><label class="theme-toggle"><span aria-hidden="true">◐</span><span>Modo oscuro</span><input id="themeToggle" type="checkbox" role="switch" aria-label="Modo oscuro" ${document.documentElement.dataset.theme==='dark'?'checked':''}></label></div></details>`;const programNav=document.querySelector('#nav [data-view="program"]'),roleNav=document.querySelector('#nav [data-view="types"]');if(programNav){programNav.dataset.view='programs';programNav.innerHTML='<span>▤</span>Programas'}if(roleNav)roleNav.textContent='Roles';document.querySelector('#systemToggle')?.remove();document.querySelector('#systemMenu')?.remove();document.querySelector('#congregationBtn').onclick=congregationDialog;document.querySelector('#headerHistoryBtn').onclick=()=>{view='history';document.querySelectorAll('#nav button[data-view]').forEach(button=>button.classList.toggle('active',button.dataset.view===view));render()};document.querySelector('#themeToggle').onchange=event=>setTheme(event.target.checked?'dark':'light');const optionsMenu=header.querySelector('.header-system');optionsMenu.querySelector('div').addEventListener('click',()=>optionsMenu.open=false);document.addEventListener('click',event=>{if(optionsMenu.open&&!optionsMenu.contains(event.target))optionsMenu.open=false})}
 setupHeaderSystem();
@@ -471,7 +474,238 @@ warningReasonsForAssignment=(program,assignment)=>{
   return [...new Set([...publicReasons,...outreachReasons])];
 };
 
-dashboard=function(){shell(`<section class="card"><div class="toolbar"><div><h2>Inicio</h2><p class="muted">Consulta el estado general de los programas. Cada módulo crea y administra sus propios programas.</p></div></div></section><section class="grid"><div class="card"><div class="stat">${db.participants.filter(person=>person.active).length}</div>Participantes activos</div><div class="card"><div class="stat">${db.turns.filter(turn=>turn.active).length}</div>Turnos públicos activos</div><div class="card"><div class="stat">${db.resources.filter(resource=>resource.active).length}</div>Puntos públicos activos</div><div class="card"><div class="stat">${db.programs.length}</div>Programas públicos</div></section>`)};
+let dashboardPublicGroups=new WeakMap();
+function dashboardPublicActivity(program,assignment){
+  let groups=dashboardPublicGroups.get(program);
+  if(!groups){groups=classifyProgramAssignments(program);dashboardPublicGroups.set(program,groups)}
+  const turn=db.turns.find(item=>item.id===assignment.turnId);
+  const resource=db.resources.find(item=>item.id===assignment.resourceId);
+  const people=(assignment.participantIds||[]).map(id=>db.participants.find(item=>item.id===id)?.name).filter(Boolean);
+  const status=groups.warning.includes(assignment)?'warning':groups.pending.includes(assignment)?'pending':'complete';
+  const reasons=status==='warning'?[unavailableReasonForAssignment(assignment),...warningReasonsForAssignment(program,assignment)].filter(Boolean):status==='pending'?[`Faltan participantes (mínimo ${minimumForResource(resource)}).`]:[];
+  return {module:'public',programId:program.id,assignmentId:assignment.id,date:assignment.date,time:turn?.start||'--:--',title:resource?.name||'Punto no disponible',detail:people.length?people.join(', '):'Sin participantes',status,reasons};
+}
+function dashboardOutreachActivity(program,assignment){
+  const result=outreachAssignmentStatus(program,assignment);
+  const place=db.outreach.places.find(item=>item.id===assignment.placeId);
+  const captain=db.participants.find(item=>item.id===assignment.captainId);
+  const conflicts=assignment.captainId?outreachModule.conflictsForAppointment(assignment.captainId,assignment,{programId:program.id,assignmentId:assignment.id}).map(conflict=>({message:conflict.message,label:outreachConflictLabel(assignment.captainId,conflict)})):[];
+  const {status,reasons}=classifyOutreachForDashboard(assignment,result,conflicts);
+  return {module:'outreach',programId:program.id,assignmentId:assignment.id,date:assignment.date,time:assignment.time||'--:--',title:place?.name||'Sin lugar de encuentro',detail:captain?`Capitán: ${captain.name}`:'Sin capitán',status,reasons};
+}
+function dashboardProgram(module,program){
+  const publicProgram=module==='public';
+  const groups=publicProgram?classifyProgramAssignments(program):null;
+  const outreachActivities=publicProgram?[]:(program.assignments||[]).filter(item=>item.inactive!==true).map(item=>dashboardOutreachActivity(program,item));
+  const total=publicProgram?groups.all.filter(item=>item.unassignedAccepted!==true).length:outreachActivities.length;
+  const prepared=publicProgram?groups.complete.filter(item=>item.unassignedAccepted!==true).length:outreachActivities.filter(item=>item.status==='complete').length;
+  const pending=publicProgram?groups.pending.filter(item=>item.unassignedAccepted!==true).length:outreachActivities.filter(item=>item.status==='pending').length;
+  const warning=publicProgram?groups.warning.filter(item=>item.unassignedAccepted!==true).length:outreachActivities.filter(item=>item.status==='warning').length;
+  const changes=publicProgram?configurationChangesForProgram(program):null;
+  return {module,id:program.id,month:program.month,total,complete:prepared,pending,warning,inactive:publicProgram?0:(program.assignments||[]).filter(item=>item.inactive===true).length,percent:total?Math.round(prepared/total*100):0,review:publicProgram?reviewState(program):outreachCalendarState(program),configurationChanges:publicProgram?changes.missing.length+changes.unavailable.length:outreachChanges(program)};
+}
+const dashboardDate=value=>new Date(`${value}T12:00:00`);
+const dashboardDayLabel=value=>dashboardDate(value).toLocaleDateString('es-MX',{weekday:'long',day:'numeric',month:'long'});
+let dashboardSelectedDate='';
+let dashboardWeekExpanded=false;
+let dashboardEditing=false,dashboardDraft=null;
+const dashboardLayoutKey=()=>`predicacion.dashboard-layout.v2:${db.meta?.workspaceId||'default'}`;
+const legacyDashboardLayoutKey=()=>`predicacion.dashboard-layout.v1:${db.meta?.workspaceId||'default'}`;
+function savedDashboardLayout(){try{return normalizeDashboardLayout(JSON.parse(localStorage.getItem(dashboardLayoutKey())||localStorage.getItem(legacyDashboardLayoutKey())||'null'))}catch{return normalizeDashboardLayout(null)}}
+function dashboardModel(){
+  const today=new Date();
+  return createDashboardModel({db,today,selectedDate:dashboardSelectedDate?dashboardDate(dashboardSelectedDate):today,describePublic:dashboardPublicActivity,describeOutreach:dashboardOutreachActivity,describePublicProgram:program=>dashboardProgram('public',program),describeOutreachProgram:program=>dashboardProgram('outreach',program)});
+}
+function dashboardOpen(module,programId,assignmentId='',scope='all'){
+  if(module==='public'){
+    const program=db.programs.find(item=>item.id===programId);
+    if(!program)return;
+    programScope=scope;
+    if(assignmentId){
+      const assignment=program.assignments.find(item=>item.id===assignmentId);
+      if(assignment)programCalendarWeekStart=calendarLocalIso(calendarMonday(calendarDate(assignment.date)));
+    }
+    setNavigation('programs');
+    openProgram(programId);
+    if(assignmentId)assignmentDialog(programId,assignmentId);
+    return;
+  }
+  const program=db.outreach.programs.find(item=>item.id===programId);
+  if(!program)return;
+  outreachCalendarScope=scope;
+  outreachModule.handleAction('openProgram',programId);
+  document.querySelectorAll('#nav button[data-view]').forEach(button=>button.classList.toggle('active',button.dataset.view==='outreachPrograms'));
+  if(assignmentId){
+    const assignment=program.assignments?.find(item=>item.id===assignmentId);
+    if(assignment)editOutreachCalendarAppointmentV2(program,assignment);
+  }
+}
+function dashboardActivityMarkup(item,attention=false){
+  const label={complete:'Completa',pending:'Pendiente',warning:'Advertencia',exception:'Excepción'}[item.status]||'Programada';
+  const moduleLabel=item.module==='public'?'Predicación pública':'Salida de predicación';
+  const description=attention?(item.reasons[0]||label):item.detail;
+  return `<li class="dashboard-activity is-${item.status}"><span class="dashboard-activity-time">${esc(attention?dashboardDayLabel(item.date):item.time)}</span><div class="dashboard-activity-copy"><strong>${esc(moduleLabel)} · ${esc(item.title)}</strong><small>${esc(attention?`${item.time} · ${description}`:description)}</small></div><span class="dashboard-status is-${item.status}">${label}</span><button type="button" class="dashboard-action" data-dashboard-open data-module="${item.module}" data-program-id="${esc(item.programId)}" data-assignment-id="${esc(item.assignmentId)}" aria-label="${esc(`Revisar ${moduleLabel}, ${dashboardDayLabel(item.date)}, ${item.time}`)}">Revisar</button></li>`;
+}
+function dashboardProgramMarkup(program){
+  const name=program.module==='public'?'Predicación pública':'Salidas de predicación';
+  if(program.missing)return `<article class="dashboard-program is-missing"><div><strong>${name}</strong><small>${esc(formatMonth(program.month))}</small></div><span class="dashboard-status is-pending">Sin programa</span><button type="button" class="dashboard-action" data-dashboard-nav="${program.module==='public'?'programs':'outreachPrograms'}">Ver programas</button></article>`;
+  const review=program.review==='reviewed'?'Revisado':program.review==='changed'?'Cambios sin revisar':'En edición';
+  return `<article class="dashboard-program"><div class="dashboard-program-name"><strong>${name}</strong><small>${esc(formatMonth(program.month))} · ${program.complete} de ${program.total} listas${program.inactive?` · ${program.inactive} sin actividad`:''}</small></div><div class="dashboard-progress" role="progressbar" aria-label="Preparación de ${name}" aria-valuenow="${program.percent}" aria-valuemin="0" aria-valuemax="100"><span style="width:${program.percent}%"></span></div><span class="dashboard-program-percent">${program.percent}%</span><span class="dashboard-status ${program.review==='reviewed'?'is-complete':'is-pending'}">${review}</span><button type="button" class="dashboard-action" data-dashboard-open data-module="${program.module}" data-program-id="${esc(program.id)}" aria-label="Abrir programa de ${name}">Abrir</button>${program.pending||program.warning||program.configurationChanges?`<small class="dashboard-program-issues">${program.pending} pendientes · ${program.warning} advertencias${program.configurationChanges?` · ${program.configurationChanges} cambios de configuración`:''}</small>`:''}</article>`;
+}
+dashboard=function(){
+  dashboardPublicGroups=new WeakMap();
+  const model=dashboardModel();
+  const todayDate=dashboardDate(model.todayKey);
+  const updated=model.dataUpdatedAt?formatDateTime(model.dataUpdatedAt):'Sin cambios registrados';
+  const metrics=[['today','Actividades hoy',model.counts.today],['upcoming','Próximos 7 días',model.counts.upcoming],['pending','Pendientes',model.counts.pending],['warning','Conflictos y advertencias',model.counts.warnings]];
+  const dayNames=['Lun','Mar','Mié','Jue','Vie','Sáb','Dom'];
+  shell(`<div class="dashboard"><section class="dashboard-heading card"><div><span class="eyebrow">Estado operativo · ${esc(db.meta?.workspaceName||db.settings?.congregationName||'Espacio de trabajo')}</span><h2>Inicio</h2><p>Hoy · ${esc(todayDate.toLocaleDateString('es-MX',{weekday:'long',day:'numeric',month:'long',year:'numeric'}))}</p></div><small>Última actualización: ${esc(updated)}</small></section><section class="dashboard-metrics" aria-label="Resumen operativo">${metrics.map(([kind,label,value])=>`<div class="dashboard-metric is-${kind}"><strong>${value}</strong><span>${label}</span></div>`).join('')}</section><div class="dashboard-columns"><section class="dashboard-panel card dashboard-today"><div class="dashboard-panel-heading"><div><span class="eyebrow">Programas de Predicación</span><h3>Agenda de hoy</h3></div><span>${model.counts.today} programadas</span></div><div class="dashboard-day-content">${model.todayActivities.length?`<ul class="dashboard-activity-list">${model.todayActivities.map(item=>dashboardActivityMarkup(item)).join('')}</ul>`:'<p class="dashboard-empty">No hay actividades programadas para hoy.</p>'}</div></section><section class="dashboard-panel card dashboard-attention"><div class="dashboard-panel-heading"><div><span class="eyebrow">Acciones</span><h3>Atención requerida</h3></div><span>Desde hoy · este mes</span></div>${model.attentionItems.length?`<ul class="dashboard-activity-list">${model.attentionItems.slice(0,6).map(item=>dashboardActivityMarkup(item,true)).join('')}</ul>${model.attentionItems.length>6?`<small class="dashboard-more">${model.attentionItems.length-6} más en los programas</small>`:''}`:'<p class="dashboard-empty">No hay pendientes ni advertencias en el periodo.</p>'}</section><section class="dashboard-panel card dashboard-week"><div class="dashboard-panel-heading"><div><span class="eyebrow">Panorama</span><h3>Esta semana</h3></div><span>Lunes a domingo</span></div><div class="dashboard-week-days">${model.weekDays.map((day,index)=>`<button type="button" class="dashboard-week-day ${day.isToday?'is-today':''}" data-dashboard-day="${day.date}" aria-label="${esc(`${dashboardDayLabel(day.date)}: ${day.count} actividades programadas`)}"><span>${dayNames[index]}</span><strong>${dashboardDate(day.date).getDate()}</strong><b>${day.count}</b><small>actividades</small></button>`).join('')}</div><div class="dashboard-upcoming"><strong>Próximos 7 días</strong><span>${model.counts.upcoming} actividades programadas</span></div></section><section class="dashboard-panel card dashboard-programs"><div class="dashboard-panel-heading"><div><span class="eyebrow">Preparación</span><h3>Programas en curso</h3></div><span>${esc(formatMonth(model.currentMonth))}</span></div><div class="dashboard-program-list">${model.programs.map(dashboardProgramMarkup).join('')}</div></section><section class="dashboard-panel card dashboard-config"><div class="dashboard-panel-heading"><div><span class="eyebrow">Contexto</span><h3>Configuración operativa</h3></div></div><div class="dashboard-config-grid"><div><strong>${model.configuration.participants}</strong><span>Participantes activos</span></div><div><strong>${model.configuration.turns}</strong><span>Turnos públicos</span></div><div><strong>${model.configuration.resources}</strong><span>Puntos públicos</span></div><div><strong>${model.configuration.outreachRules}</strong><span>Horarios de salidas</span></div></div></section><section class="dashboard-panel card dashboard-changes"><div class="dashboard-panel-heading"><div><span class="eyebrow">Trazabilidad</span><h3>Últimos cambios</h3></div><button type="button" class="dashboard-text-action" data-dashboard-nav="history">Ver historial</button></div>${model.recentChanges.length?`<ul class="dashboard-changes-list">${model.recentChanges.map(change=>`<li><span>${esc(change.action||'Cambio')}</span><small>${esc(change.at?formatDateTime(change.at):'')}</small></li>`).join('')}</ul>`:'<p class="dashboard-empty">Todavía no hay cambios registrados.</p>'}</section></div></div>`);
+  const compactHeader=document.querySelector('.dashboard-heading');
+  compactHeader.classList.remove('card');
+  compactHeader.setAttribute('aria-label','Contexto de Inicio');
+  compactHeader.replaceChildren(compactHeader.querySelector('h2'),compactHeader.querySelector('p'),compactHeader.querySelector('small'));
+  document.querySelector('.dashboard-attention .dashboard-panel-heading>span').textContent='Hasta fin de mes o 7 días';
+  const columns=document.querySelector('.dashboard-columns');
+  const todayPanel=columns.querySelector('.dashboard-today');
+  const weekPanel=columns.querySelector('.dashboard-week');
+  const weekDays=weekPanel.querySelector('.dashboard-week-days');
+  weekDays.id='dashboard-week-days';
+  const dayNavigation=document.createElement('div');
+  dayNavigation.className='dashboard-day-navigation';
+  dayNavigation.innerHTML='<div class="dashboard-day-stepper"><button type="button" data-dashboard-step="-1" aria-label="Día anterior" title="Día anterior">‹</button><strong class="dashboard-current-day"></strong><button type="button" data-dashboard-step="1" aria-label="Día siguiente" title="Día siguiente">›</button></div><div class="dashboard-day-tools"><button type="button" class="dashboard-today-action" data-dashboard-today hidden>Volver a hoy</button><button type="button" class="dashboard-week-toggle" data-dashboard-week-toggle aria-controls="dashboard-week-days" aria-expanded="false">Ver semana <span aria-hidden="true">⌄</span></button></div>';
+  todayPanel.querySelector('h3').textContent='Agenda';
+  todayPanel.querySelector('.dashboard-panel-heading').after(dayNavigation,weekDays);
+  weekPanel.remove();
+  const dashboardRoot=document.querySelector('.dashboard');
+  const blockNodes={metrics:dashboardRoot.querySelector('.dashboard-metrics'),programs:columns.querySelector('.dashboard-programs'),agenda:todayPanel,attention:columns.querySelector('.dashboard-attention'),config:columns.querySelector('.dashboard-config'),changes:columns.querySelector('.dashboard-changes')};
+  const layout=dashboardEditing?(dashboardDraft??=savedDashboardLayout()):savedDashboardLayout();
+  const layoutGrid=document.createElement('div');
+  layoutGrid.className=`dashboard-layout grid-stack${dashboardEditing?' is-editing':''}`;
+  const labels={metrics:'Indicadores',programs:'Programas en curso',agenda:'Agenda',attention:'Atención requerida',config:'Configuración operativa',changes:'Últimos cambios'};
+  for(const block of layout.blocks){
+    if(block.id==='attention'&&!model.attentionItems.length)continue;
+    const node=blockNodes[block.id];
+    if(!node)continue;
+    const tile=document.createElement('div');
+    tile.className=`dashboard-tile dashboard-tile-${block.id} grid-stack-item`;
+    tile.dataset.dashboardBlock=block.id;
+    tile.setAttribute('gs-id',block.id);
+    tile.setAttribute('gs-x',String(block.x));
+    tile.setAttribute('gs-y',String(block.y));
+    tile.setAttribute('gs-w',String(block.w));
+    tile.setAttribute('gs-h','6');
+    tile.setAttribute('gs-min-w','2');
+    const content=document.createElement('div');
+    content.className='grid-stack-item-content dashboard-tile-content';
+    const body=document.createElement('div');
+    body.className='dashboard-tile-body';
+    body.append(node);
+    if(dashboardEditing){
+      const controls=document.createElement('div');
+      controls.className='dashboard-edit-controls';
+      controls.innerHTML=`<button type="button" class="dashboard-drag-handle" aria-label="Arrastrar ${labels[block.id]}" title="Arrastrar para cambiar de posición">⠿ <span>${labels[block.id]}</span></button><div class="dashboard-edit-move"><button type="button" data-dashboard-move="-1" aria-label="Subir ${labels[block.id]}" title="Mover arriba">↑</button><button type="button" data-dashboard-move="1" aria-label="Bajar ${labels[block.id]}" title="Mover abajo">↓</button><button type="button" data-dashboard-width aria-label="Cambiar ancho de ${labels[block.id]}" title="Cambiar entre medio ancho y ancho completo">↔</button></div>`;
+      body.prepend(controls);
+    }
+    content.append(body);
+    tile.append(content);
+    layoutGrid.append(tile);
+  }
+  columns.replaceWith(layoutGrid);
+  if(!window.GridStack)throw new Error('No se pudo cargar el editor de Inicio. Instala las dependencias con npm install.');
+  dashboardGrid=window.GridStack.init({column:4,cellHeight:22,margin:7,mode:'top',sizeToContent:true,staticGrid:!dashboardEditing,animate:true,draggable:{handle:'.dashboard-drag-handle'},resizable:{handles:'e,w'},columnOpts:{columnMax:4,breakpoints:[{w:1100,c:2},{w:650,c:1}],layout:'list'}},layoutGrid);
+  const captureLayout=()=>{
+    const visible=dashboardGrid.save(false,false).map(item=>({id:item.id,x:item.x,y:item.y,w:item.w}));
+    const hidden=layout.blocks.filter(block=>!visible.some(item=>item.id===block.id));
+    return normalizeDashboardLayout({version:2,blocks:[...visible,...hidden]});
+  };
+  if(dashboardEditing){
+    dashboardGrid.on('dragstop',()=>{dashboardDraft=captureLayout()});
+    dashboardGrid.on('resizestop',(event,element)=>{
+      const node=element.gridstackNode;
+      const width=node.w>=3?4:2;
+      dashboardGrid.update(element,{w:width,x:width===4?0:node.x});
+      dashboardGrid.resizeToContent(element);
+      dashboardDraft=captureLayout();
+    });
+    layoutGrid.querySelectorAll('.dashboard-tile').forEach(tile=>{
+      tile.querySelectorAll('[data-dashboard-move]').forEach(button=>button.onclick=()=>{
+        const visible=[...layoutGrid.querySelectorAll('.dashboard-tile')].sort((a,b)=>a.gridstackNode.y-b.gridstackNode.y||a.gridstackNode.x-b.gridstackNode.x);
+        const index=visible.indexOf(tile);
+        const target=visible[index+Number(button.dataset.dashboardMove)];
+        if(!target)return;
+        const updated=captureLayout();
+        const currentBlock=updated.blocks.find(item=>item.id===tile.dataset.dashboardBlock);
+        const targetBlock=updated.blocks.find(item=>item.id===target.dataset.dashboardBlock);
+        [currentBlock.x,targetBlock.x]=[targetBlock.x,currentBlock.x];
+        [currentBlock.y,targetBlock.y]=[targetBlock.y,currentBlock.y];
+        const currentIndex=updated.blocks.indexOf(currentBlock),targetIndex=updated.blocks.indexOf(targetBlock);
+        [updated.blocks[currentIndex],updated.blocks[targetIndex]]=[updated.blocks[targetIndex],updated.blocks[currentIndex]];
+        dashboardDraft=updated;
+        dashboard();
+      });
+      tile.querySelector('[data-dashboard-width]').onclick=()=>{
+        const node=tile.gridstackNode;
+        const width=node.w===4?2:4;
+        dashboardGrid.update(tile,{x:width===4?0:node.x,w:width});
+        dashboardGrid.resizeToContent(tile);
+        dashboardDraft=captureLayout();
+      };
+    });
+  }
+  const editActions=document.createElement('div');
+  editActions.className='dashboard-layout-actions';
+  editActions.innerHTML=dashboardEditing?'<button type="button" data-dashboard-layout="reset">Restablecer diseño</button><button type="button" data-dashboard-layout="cancel">Cancelar</button><button type="button" class="primary" data-dashboard-layout="save">Guardar diseño</button>':'<button type="button" data-dashboard-layout="edit">Personalizar Inicio</button>';
+  compactHeader.append(editActions);
+  editActions.onclick=event=>{
+    const action=event.target.closest('[data-dashboard-layout]')?.dataset.dashboardLayout;
+    if(!action)return;
+    if(action==='edit'){dashboardDraft=savedDashboardLayout();dashboardEditing=true}
+    if(action==='cancel'){dashboardDraft=null;dashboardEditing=false}
+    if(action==='reset'){dashboardDraft=normalizeDashboardLayout(DEFAULT_DASHBOARD_LAYOUT)}
+    if(action==='save'){
+      try{localStorage.setItem(dashboardLayoutKey(),JSON.stringify(captureLayout()))}
+      catch{window.alert('No se pudo guardar el diseño en este navegador.');return}
+      dashboardDraft=null;dashboardEditing=false;
+    }
+    dashboard();
+  };
+  document.querySelectorAll('[data-dashboard-open]').forEach(button=>button.onclick=()=>dashboardOpen(button.dataset.module,button.dataset.programId,button.dataset.assignmentId||''));
+  document.querySelectorAll('[data-dashboard-nav]').forEach(button=>button.onclick=()=>setNavigation(button.dataset.dashboardNav));
+  const paintSelectedDay=()=>{
+    const selectedModel=dashboardModel();
+    dashboardSelectedDate=selectedModel.selectedKey;
+    const isToday=selectedModel.selectedKey===selectedModel.todayKey;
+    const selectedYear=dashboardDate(selectedModel.selectedKey).getFullYear();
+    const yearSuffix=selectedYear===dashboardDate(selectedModel.todayKey).getFullYear()?'':` de ${selectedYear}`;
+    dayNavigation.querySelector('.dashboard-current-day').textContent=`${isToday?'Hoy · ':''}${dashboardDayLabel(selectedModel.selectedKey)}${yearSuffix}`;
+    dayNavigation.querySelector('[data-dashboard-today]').hidden=isToday;
+    const toggle=dayNavigation.querySelector('[data-dashboard-week-toggle]');
+    toggle.setAttribute('aria-expanded',String(dashboardWeekExpanded));
+    toggle.innerHTML=`${dashboardWeekExpanded?'Ocultar semana':'Ver semana'} <span aria-hidden="true">${dashboardWeekExpanded?'⌃':'⌄'}</span>`;
+    weekDays.hidden=!dashboardWeekExpanded;
+    weekDays.querySelectorAll('[data-dashboard-day]').forEach((button,index)=>{
+      const day=selectedModel.weekDays[index];
+      button.dataset.dashboardDay=day.date;
+      button.setAttribute('aria-label',`${dashboardDayLabel(day.date)}: ${day.count} actividades programadas`);
+      button.querySelector('strong').textContent=String(dashboardDate(day.date).getDate());
+      button.querySelector('b').textContent=String(day.count);
+      button.classList.toggle('is-today',day.isToday);
+      const selected=day.date===selectedModel.selectedKey;
+      button.classList.toggle('is-selected',selected);
+      button.setAttribute('aria-pressed',String(selected));
+    });
+    const activities=selectedModel.selectedActivities;
+    todayPanel.querySelector('.dashboard-panel-heading>span').textContent=`${activities.length} programadas`;
+    todayPanel.querySelector('.dashboard-day-content').innerHTML=activities.length?`<ul class="dashboard-activity-list">${activities.map(item=>dashboardActivityMarkup(item)).join('')}</ul>`:`<p class="dashboard-empty">No hay actividades programadas para ${isToday?'hoy':'este día'}.</p>`;
+    todayPanel.querySelectorAll('[data-dashboard-open]').forEach(action=>action.onclick=()=>dashboardOpen(action.dataset.module,action.dataset.programId,action.dataset.assignmentId||''));
+    requestAnimationFrame(()=>{const tile=layoutGrid.querySelector('.dashboard-tile-agenda');if(tile?.isConnected&&dashboardGrid)dashboardGrid.resizeToContent(tile)});
+  };
+  dayNavigation.querySelectorAll('[data-dashboard-step]').forEach(button=>button.onclick=()=>{const date=dashboardDate(dashboardSelectedDate);date.setDate(date.getDate()+Number(button.dataset.dashboardStep));dashboardSelectedDate=calendarLocalIso(date);paintSelectedDay()});
+  dayNavigation.querySelector('[data-dashboard-today]').onclick=()=>{dashboardSelectedDate='';paintSelectedDay()};
+  dayNavigation.querySelector('[data-dashboard-week-toggle]').onclick=()=>{dashboardWeekExpanded=!dashboardWeekExpanded;paintSelectedDay()};
+  weekDays.onclick=event=>{const button=event.target.closest('[data-dashboard-day]');if(!button)return;dashboardSelectedDate=button.dataset.dashboardDay;paintSelectedDay()};
+  paintSelectedDay();
+};
 
 const originalRender=render;
 render=function(){
@@ -494,6 +728,7 @@ function setNavGroup(group,open){
   if(icon)icon.textContent=open?'⌄':'›';
 }
 function setNavigation(nextView){
+  if(nextView==='dashboard'){dashboardSelectedDate='';dashboardWeekExpanded=false}
   view=nextView;
   document.querySelectorAll('#nav button[data-view]').forEach(button=>button.classList.toggle('active',button.dataset.view===nextView));
   navGroups.forEach(group=>{if(group.views.includes(nextView))setNavGroup(group,true)});
@@ -546,7 +781,7 @@ function outreachConflictLabel(captainId,conflict){
   return `${name} tiene otra asignación: ${message}`;
 }
 function outreachAssignmentStatus(program,assignment){
-  if(assignment.inactive===true)return {kind:'inactive',reasons:[]};
+  if(assignment.inactive===true)return {kind:'inactive',reasons:[],unavailableReasons:[]};
   const reasons=[],unavailable=[];
   if(!assignment.placeId)reasons.push('Sin lugar de encuentro.');
   if(!assignment.captainId)reasons.push('Sin capitán.');
@@ -571,7 +806,7 @@ function outreachAssignmentStatus(program,assignment){
     unavailable.push(...conflicts.map(item=>outreachConflictLabel(assignment.captainId,item)));
   }
   reasons.push(...unavailable);
-  return {kind:unavailable.length?'unavailable':reasons.length?'attention':'complete',reasons};
+  return {kind:unavailable.length?'unavailable':reasons.length?'attention':'complete',reasons,unavailableReasons:unavailable};
 }
 function outreachTimeLabel(assignment){
   const date=new Date(`${assignment.date}T12:00:00`),rule=assignment.scheduleId
